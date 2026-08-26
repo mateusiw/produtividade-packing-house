@@ -345,8 +345,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                     <div class="grid grid-cols-2 gap-2.5">
                         <div id="statRecebidas" class="rounded-xl border border-slate-200 p-3"></div>
-                        <div id="statProcessadas" class="rounded-xl border border-slate-200 p-3"></div>
+                        <div id="statKg" class="rounded-xl border border-slate-200 p-3"></div>
                         <div id="statPendente" class="rounded-xl border border-slate-200 p-3"></div>
+                        <div id="statProcessadas" class="rounded-xl border border-slate-200 p-3"></div>
+                        <div id="statFiletado" class="rounded-xl border border-slate-200 p-3"></div>
                         <div id="statItens" class="rounded-xl border border-slate-200 p-3"></div>
                     </div>
                 </div>
@@ -520,7 +522,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                     <div class="flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
                         <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input type="checkbox" id="resumoMostrarColaborador" checked onchange="toggleResumoColaborador()" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0">
+                            <input type="checkbox" id="resumoMostrarColaborador" onchange="toggleResumoColaborador()" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0">
                             <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Mostrar colaborador na tabela</span>
                         </label>
                         <label class="flex items-center gap-1.5 cursor-pointer select-none">
@@ -2043,7 +2045,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             document.getElementById('previewFiltro').innerText = entregasFiltroLabel();
 
-            let totalRecebidas = 0, totalProcessadas = 0, totalPendente = 0;
+            let totalRecebidas = 0, totalProcessadas = 0, totalPendente = 0, totalKg = 0;
             // Começa com todo produto cadastrado zerado, pra um produto novo aparecer
             // na tabela "Produtos Processados" (com 0 cx) mesmo antes de ter algum
             // lote lançado contra ele — não só depois de já ter sido usado.
@@ -2056,6 +2058,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 totalRecebidas += t.recebidas;
                 totalProcessadas += t.processadas;
                 totalPendente += t.pendente;
+                totalKg += Number(card.kgRecebidos) || 0;
 
                 card.lotes.forEach(l => {
                     byProduto[l.produto] = (byProduto[l.produto] || 0) + l.quantidade;
@@ -2068,6 +2071,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             document.getElementById('statProcessadas').innerHTML = statTileHtml('package-check', 'bg-sky-50 text-sky-600', 'Processadas', `${totalProcessadas} cx`);
             document.getElementById('statPendente').innerHTML = statTileHtml('hourglass', 'bg-red-50 text-red-600', 'Não Processado', `${totalPendente} cx`, 'text-red-600');
             document.getElementById('statItens').innerHTML = statTileHtml('list', 'bg-slate-100 text-slate-500', 'Entregas', savedCards.length);
+            document.getElementById('statFiletado').innerHTML = statTileHtml('fish', 'bg-amber-50 text-amber-600', 'Filetado', `${byProduto['Filetado'] || 0} cx`);
+            document.getElementById('statKg').innerHTML = statTileHtml('scale', 'bg-brand-50 text-brand-600', 'KG Entregues', `${totalKg.toLocaleString('pt-BR')} kg`);
 
             const emptyEl = document.getElementById('previewEmpty');
             const bodyEl = document.getElementById('previewBody');
@@ -3065,9 +3070,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const saldoDe = produto => linhas.filter(l => l.produto === produto).reduce((s, l) => s + (l.produzido - l.baixado), 0);
             const totalEstoque = linhas.reduce((s, l) => s + (l.produzido - l.baixado), 0);
             const parceirosComEstoque = new Set(linhas.filter(l => (l.produzido - l.baixado) !== 0).map(l => l.produtor)).size;
+            // "Não Processado" aqui é o mesmo total pendente da aba Visão Geral
+            // (caixas entregues que ainda não viraram nenhum produto processado),
+            // não um saldo de produto — por isso usa entregas/processamentos
+            // globais em vez de saldoDe('Não Processado').
+            const totalNaoProcessado = allEntregas.reduce((s, e) => s + calcPendente(e.caixasRecebidas, statsForEntrega(e.id), e.pendenteManual), 0);
             document.getElementById('estoqueKpiTotal').innerHTML = kpiTileHtml('boxes', 'bg-brand-50 text-brand-600', 'Em estoque', `${totalEstoque} cx`);
             document.getElementById('estoqueKpiProcessado').innerHTML = kpiTileHtml('package-check', 'bg-sky-50 text-sky-600', 'Processado', `${saldoDe('Processado')} cx`);
-            document.getElementById('estoqueKpiNaoProcessado').innerHTML = kpiTileHtml('hourglass', 'bg-red-50 text-red-600', 'Não Processado', `${saldoDe('Não Processado')} cx`, 'text-red-600');
+            document.getElementById('estoqueKpiNaoProcessado').innerHTML = kpiTileHtml('hourglass', 'bg-red-50 text-red-600', 'Não Processado', `${totalNaoProcessado} cx`, 'text-red-600');
             document.getElementById('estoqueKpiFiletado').innerHTML = kpiTileHtml('fish', 'bg-amber-50 text-amber-600', 'Filetado', `${saldoDe('Filetado')} cx`);
             document.getElementById('estoqueKpiParceiros').innerHTML = kpiTileHtml('users', 'bg-slate-100 text-slate-500', 'Parceiros', `${parceirosComEstoque}`);
             lucide.createIcons();
@@ -3110,7 +3120,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                 saldoTableEl.innerHTML = `
                     <table class="report-table">
-                        <thead><tr><th>Parceiro</th><th>Produto</th><th class="num">Produzido</th><th class="num">Baixado</th><th class="num">Saldo</th></tr></thead>
+                        <thead><tr><th>Parceiro</th><th>Produto</th><th class="num">Estoque de Caixas</th><th class="num">Saída de Caixas</th><th class="num">Saldo</th></tr></thead>
                         <tbody>${bodyHtml}</tbody>
                         <tfoot><tr><td colspan="2">Total</td><td class="num">${totalProduzido} cx</td><td class="num">${totalBaixado} cx</td><td class="num">${totalSaldo} cx</td></tr></tfoot>
                     </table>
