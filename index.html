@@ -92,8 +92,51 @@
         /* Barra do topo — translúcida com desfoque, flutuando sobre a página com
            cantos arredondados, igual ao .topbar do index.html (em vez da barra
            escura de ponta a ponta de antes). */
-        .nav-bar { background: var(--surface-translucent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-            border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow-md); }
+        /* App shell (menu lateral fixo + cabeçalho + conteúdo) — substitui a
+           navbar + colunas soltas de antes. As "páginas" (Início/Estoque/
+           Movimentações) são divs trocadas via JS (switchPage), igual às
+           abas do modal de Resumo, só que permanentes em vez de num modal.
+           A sidebar usa uma cor fixa (não os tokens --ink, que invertem no
+           dark mode) porque em qualquer tema do app ela continua escura,
+           como numa referência de dashboard típica. */
+        .app-shell { display: flex; min-height: 100vh; }
+        /* position: fixed (não sticky) — sticky "acaba" perto do fim de uma
+           página longa (o menu descola pra cima quando o fundo do container
+           chega perto do fundo da viewport); fixed mantém a sidebar inteira,
+           com o fundo verde-escuro, sempre colada na tela durante o scroll. */
+        .app-sidebar { width: 240px; flex-shrink: 0; background: #0e2018; color: #eef4f0;
+            display: flex; flex-direction: column; padding: 20px 14px; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; z-index: 30; }
+        .app-sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 22px; }
+        .app-sidebar-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+        .app-sidebar-nav button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 12px;
+            color: rgba(238,244,240,.6); font-size: 13px; font-weight: 700; text-align: left; transition: background .15s, color .15s; }
+        .app-sidebar-nav button:hover { background: rgba(255,255,255,.07); color: #fff; }
+        .app-sidebar-nav button.active { background: var(--brand); color: #fff; }
+        /* Modo "autohide" do menu lateral (opção em Configurações): a sidebar
+           vira posição fixa e fica escondida, deixando só uma tirinha de 10px
+           encostada na borda esquerda — passar o mouse nela (ou nela mesma,
+           já expandida) traz o menu de volta por cima do conteúdo. */
+        body.sidebar-autohide .app-sidebar { position: fixed; left: 0; top: 0; transform: translateX(calc(-100% + 10px));
+            transition: transform .2s ease; box-shadow: 6px 0 24px rgba(0,0,0,.35); }
+        body.sidebar-autohide .app-sidebar:hover,
+        body.sidebar-autohide .app-sidebar:focus-within { transform: translateX(0); }
+        body.sidebar-autohide .app-main { margin-left: 10px; }
+        .app-main { flex: 1; min-width: 0; margin-left: 240px; display: flex; flex-direction: column; }
+        .app-topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; z-index: 20; }
+        .app-content { flex: 1; padding: 20px 24px 40px; }
+        @media (max-width: 900px) {
+            .app-shell { flex-direction: column; }
+            .app-sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; padding: 10px 14px; overflow-x: auto; gap: 10px; }
+            .app-sidebar-brand { padding: 0 10px 0 0; }
+            .app-sidebar-nav { flex-direction: row; }
+            .app-sidebar-nav button span { display: none; }
+            .app-main { margin-left: 0; }
+            body.sidebar-autohide .app-sidebar { position: static; transform: none; box-shadow: none; }
+            body.sidebar-autohide .app-main { margin-left: 0; }
+            .app-topbar { padding: 12px 16px; }
+            .app-content { padding: 14px 16px 32px; }
+        }
 
         .form-card { background: var(--surface); border-radius: 20px; border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
         .form-card-header { background: var(--surface); border-bottom: 1px solid var(--line); border-radius: 18px 18px 0 0; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
@@ -143,6 +186,15 @@
         .report-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
         .report-table .muted { color: var(--muted); }
 
+        /* Fonte maior só dentro do card de resumo compartilhável (#report-card) —
+           ele vira uma imagem comprimida pelo WhatsApp e é visto no celular, então
+           precisa ficar legível mesmo pequeno/comprimido; as outras tabelas que
+           reaproveitam .report-table (Início, Relatórios) ficam na tela do app,
+           com mais espaço, e não precisam desse ajuste. */
+        #report-card .report-table { font-size: 13px; }
+        #report-card .report-table th { font-size: 10.5px; padding: 8px 10px; }
+        #report-card .report-table td { padding: 9px 10px; }
+
         .config-banner { background: rgba(245,169,19,.16); border: 1.5px solid var(--warning); color: #a06908; border-radius: 12px; padding: 10px 14px; font-size: 12px; font-weight: 600; }
         :root[data-theme="dark"] .config-banner { color: var(--warning); }
         @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .config-banner { color: var(--warning); } }
@@ -167,13 +219,34 @@
         .lote-row:last-child { border-bottom: none; }
         .badge-total { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 800; background: var(--surface-3); color: var(--ink); white-space: nowrap; }
 
+        /* Linha de saldo negativo na tabela de estoque — tinge a linha inteira
+           (não só o número) pra saltar aos olhos ao escanear a tabela rápido.
+           !important vence o zebra-striping padrão (.report-table tbody tr:nth-child(even) td).
+           Classe repetida de propósito: aumenta a especificidade pra sempre vencer
+           .group-shade quando as duas caem na mesma linha (negativo é mais urgente
+           que o sombreado de agrupamento por parceiro). */
+        .report-table tbody tr.row-negative.row-negative td { background: var(--critical-soft) !important; }
+
+        /* Linha de seção (separador de parceiro) na tabela de estoque — texto em
+           negrito ocupando a linha inteira via colspan, com uma barra colorida à
+           esquerda (grudada por cima do padding do td) pra pesar mais que uma
+           linha comum e marcar bem onde começa cada parceiro, sem repetir o
+           cabeçalho da tabela a cada um. */
+        .report-table tbody tr.section-row td { background: var(--brand-soft) !important; font-weight: 800; color: var(--brand-dark); font-size: 12px; padding-top: 9px; padding-bottom: 9px; border-bottom-color: var(--brand-soft-strong); border-top: 2px solid var(--brand-soft-strong); box-shadow: inset 3px 0 0 var(--brand); }
+        .report-table tbody tr.section-row:first-child td { border-top: none; }
+        .report-table tbody tr.section-row:hover { background: var(--brand-soft) !important; }
+
+        /* Sombreia (em bloco) as linhas de produto do parceiro "ímpar" do grupo —
+           alternando por PARCEIRO em vez de por linha — pra ficar óbvio onde um
+           grupo termina e o outro começa mesmo rolando rápido pela tabela.
+           !important vence o zebra-striping padrão por linha. */
+        .report-table tbody tr.group-shade td { background: var(--surface-2) !important; }
+
         /* Telas pequenas (celular): encolhe fonte/espaçamento pra caber mais sem cortar
            texto. As tabelas de relatório, além de encolher, também rolam de lado
            (overflow-x-auto no container) — ver .report-table min-width acima. */
         @media (max-width: 480px) {
-            .nav-bar { padding-left: 10px; padding-right: 10px; padding-top: 8px; padding-bottom: 8px; }
-            .nav-bar h1 { font-size: 12px; }
-            .nav-bar button { padding-left: 10px; padding-right: 10px; padding-top: 7px; padding-bottom: 7px; }
+            .app-topbar { padding-left: 12px; padding-right: 12px; }
             .form-card-header { padding: 12px 14px; gap: 8px; }
             /* Empilha o nome do parceiro numa linha própria (largura cheia) e o badge de
                totais embaixo — evita a data/lápis (que não encolhem) espremerem o nome. */
@@ -231,42 +304,142 @@
 </head>
 <body class="min-h-screen pb-20 select-none">
 
-    <!-- Navbar -->
-    <div class="nav-bar mx-2.5 sm:mx-4 mt-2.5 sm:mt-4 px-4 py-2.5 flex flex-wrap justify-between items-center gap-y-2 sticky top-2.5 sm:top-4 z-40">
-        <div class="flex items-center gap-3">
-            <div class="relative shrink-0">
-                <img src="logo.png" alt="Logo SPG" class="w-10 h-10 rounded-full object-cover border-2 border-brand-500/40 shadow-lg">
-                <span class="pulse-dot absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white"></span>
+    <div class="app-shell">
+        <!-- Sidebar -->
+        <aside class="app-sidebar">
+            <div class="app-sidebar-brand">
+                <img src="logo.png" alt="Logo SPG" class="w-9 h-9 rounded-full object-cover border-2 border-white/20 shrink-0">
+                <div class="min-w-0">
+                    <h1 class="text-xs font-black leading-tight tracking-wide truncate">SPG SEDE</h1>
+                    <p class="text-[9px] text-white/50 font-bold uppercase tracking-widest">Produtividade</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-sm font-black text-slate-800 leading-tight tracking-wide">SPG SEDE</h1>
-                <p class="text-[10px] text-brand-600 font-bold uppercase tracking-widest">Produtividade Diária</p>
+            <nav class="app-sidebar-nav" id="appSidebarNav">
+                <button type="button" onclick="switchPage('inicio')" data-page="inicio">
+                    <i data-lucide="boxes" class="w-4 h-4 shrink-0"></i> <span>Estoque</span>
+                </button>
+                <button type="button" onclick="switchPage('estoque')" data-page="estoque">
+                    <i data-lucide="truck" class="w-4 h-4 shrink-0"></i> <span>Entregas</span>
+                </button>
+                <button type="button" onclick="switchPage('movimentacoes')" data-page="movimentacoes">
+                    <i data-lucide="arrow-left-right" class="w-4 h-4 shrink-0"></i> <span>Movimentações</span>
+                </button>
+                <button type="button" onclick="switchPage('relatorios')" data-page="relatorios">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i> <span>Relatórios</span>
+                </button>
+                <button type="button" onclick="openCadastroModal()" data-page="configuracoes">
+                    <i data-lucide="settings" class="w-4 h-4 shrink-0"></i> <span>Configurações</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <div class="app-main">
+            <header class="app-topbar">
+                <div class="min-w-0">
+                    <h2 id="topbarTitulo" class="text-lg font-black text-slate-800 leading-tight">Resumo & Estoque</h2>
+                    <p id="topbarSubtitulo" class="text-[11px] text-slate-500 font-medium mt-0.5">Acompanhamento em tempo real do estoque</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" onclick="toggleSidebarMode()" id="sidebarModeToggleBtn" title="Alternar modo do menu lateral" class="flex items-center justify-center w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl transition-all active:scale-95 shrink-0">
+                        <i data-lucide="pin" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" onclick="toggleTheme()" id="themeToggleBtn" title="Alternar tema" class="flex items-center justify-center w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl transition-all active:scale-95 shrink-0">
+                        <i data-lucide="sun-moon" class="w-4 h-4"></i>
+                    </button>
+                    <div class="hidden sm:flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                        <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <span class="text-[11px] font-bold text-slate-500">Última atualização</span>
+                        <span id="topbarUltimaAtualizacao" class="text-[11px] font-black text-slate-700">—</span>
+                        <button type="button" onclick="refreshInicioPage()" title="Atualizar" class="text-slate-400 hover:text-brand-600 ml-1">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <button type="button" id="baixaEstoqueToggleBtn" onclick="toggleBaixaEstoqueForm()" class="hidden items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black shadow-lg shadow-brand-600/20 transition-all active:scale-95 shrink-0">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Dar baixa no estoque</span><span class="sm:hidden">Baixa</span>
+                    </button>
+                    <button type="button" id="compartilharResumoBtn" onclick="confirmBeforeShare()" class="hidden items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black shadow-lg shadow-brand-600/20 transition-all active:scale-95 border border-transparent shrink-0">
+                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Compartilhar Resumo</span>
+                        <span class="sm:hidden">Compartilhar</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="app-content">
+
+    <!-- PÁGINA: INÍCIO (dashboard de estoque) -->
+    <div id="pageInicio">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <div id="inicioKpiEstoque"></div>
+            <div id="inicioKpiPendente"></div>
+            <div id="inicioKpiParceiros"></div>
+            <div id="inicioKpiMovimentacoes"></div>
+        </div>
+
+        <div class="mt-6">
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                    Saldo por produto
+                    <i data-lucide="info" class="w-3 h-3 text-slate-300" title="Saldo somado de todos os parceiros para cada produto"></i>
+                </span>
+                <button type="button" onclick="document.getElementById('inicioDetalhadoSection').scrollIntoView({behavior:'smooth'})" class="text-[11px] font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
+                    Ver detalhamento completo <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                </button>
+            </div>
+            <div id="inicioProdutosCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+            <div class="flex items-center gap-4 mt-2.5 flex-wrap">
+                <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Normal (saldo ≥ 0)</span>
+                <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Crítico (estoque negativo)</span>
             </div>
         </div>
-        <div class="flex gap-2">
-            <button type="button" onclick="toggleTheme()" id="themeToggleBtn" title="Alternar tema" class="flex items-center justify-center w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl transition-all active:scale-95">
-                <i data-lucide="sun-moon" class="w-4 h-4"></i>
-            </button>
-            <button type="button" onclick="openResumoModal()" title="Resumo Geral" class="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold transition-all active:scale-95">
-                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">Resumo</span>
-            </button>
-            <button type="button" onclick="openEstoqueModal()" title="Estoque de Caixas" class="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold transition-all active:scale-95">
-                <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">Estoque</span>
-            </button>
-            <button type="button" onclick="openCadastroModal()" title="Gerenciar Cadastros" class="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold transition-all active:scale-95">
-                <i data-lucide="settings" class="w-3.5 h-3.5"></i>
-            </button>
-            <button type="button" onclick="confirmBeforeShare()" class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black shadow-lg shadow-brand-600/20 transition-all active:scale-95 border border-transparent">
-                <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">Compartilhar Resumo</span>
-                <span class="sm:hidden">Compartilhar</span>
-            </button>
+
+        <div id="inicioDetalhadoSection" class="mt-6 grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5 items-start">
+            <div class="rounded-xl border border-slate-200 overflow-hidden">
+                <div class="p-3 border-b border-slate-200 bg-slate-50 space-y-2">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Estoque detalhado</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative flex-1 min-w-[180px]">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="inicioBusca" oninput="renderInicioPage()" placeholder="Buscar parceiro ou produto..." class="w-full pl-8 pr-2.5 py-2 border font-semibold text-xs">
+                        </div>
+                        <select id="inicioFiltroParceiro" onchange="renderInicioPage()" class="p-2 border font-semibold text-xs"><option value="">Todos os parceiros</option></select>
+                        <select id="inicioFiltroProduto" onchange="renderInicioPage()" class="p-2 border font-semibold text-xs"><option value="">Todos os produtos</option></select>
+                        <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 cursor-pointer select-none ml-auto">
+                            <input type="checkbox" id="inicioApenasNegativos" onchange="renderInicioPage()" class="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-500 focus:ring-offset-0">
+                            Apenas negativos
+                        </label>
+                    </div>
+                </div>
+
+
+                <div id="estoqueLoading" class="text-center text-slate-400 text-xs italic py-10">
+                    Carregando estoque...
+                </div>
+
+                <div id="estoqueContent" class="hidden">
+                    <div id="estoqueSaldoTable" class="overflow-x-auto"></div>
+                </div>
+            </div>
+
+            <div>
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Histórico de baixas</span>
+                <div class="flex gap-1.5 flex-wrap mb-2" id="estoqueHistoricoFiltros">
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('hoje')" data-periodo="hoje" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">Hoje</button>
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('7dias')" data-periodo="7dias" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">7 dias</button>
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('30dias')" data-periodo="30dias" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">30 dias</button>
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('tudo')" data-periodo="tudo" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">Tudo</button>
+                </div>
+                <div id="estoqueHistorico" class="rounded-xl border border-slate-200 divide-y divide-slate-100">
+                    <div class="summary-row"><span class="text-xs text-slate-400 italic">Carregando...</span></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="container mx-auto p-2.5 sm:p-4 flex flex-col lg:flex-row gap-4 sm:gap-6 mt-4">
+    <!-- PÁGINA: ESTOQUE (fluxo de Entregas) -->
+    <div id="pageEstoque" class="hidden flex flex-col lg:flex-row gap-4 sm:gap-6">
 
         <!-- COLUNA DA ESQUERDA: ENTREGAS AO VIVO -->
         <div class="w-full lg:w-1/2 space-y-4">
@@ -345,11 +518,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                     <div class="grid grid-cols-2 gap-2.5">
                         <div id="statRecebidas" class="rounded-xl border border-slate-200 p-3"></div>
-                        <div id="statKg" class="rounded-xl border border-slate-200 p-3"></div>
-                        <div id="statPendente" class="rounded-xl border border-slate-200 p-3"></div>
                         <div id="statProcessadas" class="rounded-xl border border-slate-200 p-3"></div>
-                        <div id="statFiletado" class="rounded-xl border border-slate-200 p-3"></div>
-                        <div id="statItens" class="rounded-xl border border-slate-200 p-3"></div>
+                        <div id="statPendente" class="rounded-xl border border-slate-200 p-3"></div>
+                        <div id="statKg" class="rounded-xl border border-slate-200 p-3"></div>
                     </div>
                 </div>
 
@@ -387,6 +558,121 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SPG Sede</span>
                     <span class="text-[10px] font-semibold text-slate-300 uppercase tracking-widest">Produtividade</span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PÁGINA: MOVIMENTAÇÕES (linha do tempo de entregas, lotes e baixas) -->
+    <div id="pageMovimentacoes" class="hidden">
+        <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Linha do tempo</span>
+            <div class="flex gap-1.5 flex-wrap" id="movimentacoesFiltros">
+                <button type="button" onclick="setMovimentacoesQuickFilter('hoje')" data-periodo="hoje" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">Hoje</button>
+                <button type="button" onclick="setMovimentacoesQuickFilter('7dias')" data-periodo="7dias" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">7 dias</button>
+                <button type="button" onclick="setMovimentacoesQuickFilter('30dias')" data-periodo="30dias" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">30 dias</button>
+                <button type="button" onclick="setMovimentacoesQuickFilter('tudo')" data-periodo="tudo" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">Tudo</button>
+            </div>
+        </div>
+        <div id="movimentacoesLista" class="rounded-xl border border-slate-200 divide-y divide-slate-100">
+            <div class="summary-row"><span class="text-xs text-slate-400 italic">Carregando...</span></div>
+        </div>
+    </div>
+
+    <!-- PÁGINA: RELATÓRIOS -->
+    <div id="pageRelatorios" class="hidden">
+        <div id="resumoPainel" class="space-y-5">
+            <div class="rounded-xl border border-slate-200 p-3">
+                <div class="flex flex-wrap items-end gap-2">
+                    <div>
+                        <label class="section-label">De</label>
+                        <input type="date" id="resumoDataInicio" onchange="applyResumoFilter()" class="p-2 border font-semibold text-xs">
+                    </div>
+                    <div>
+                        <label class="section-label">Até</label>
+                        <input type="date" id="resumoDataFim" onchange="applyResumoFilter()" class="p-2 border font-semibold text-xs">
+                    </div>
+                    <div class="flex gap-1.5 flex-wrap">
+                        <button type="button" onclick="setResumoQuickFilter('hoje')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Hoje</button>
+                        <button type="button" onclick="setResumoQuickFilter('7dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">7 dias</button>
+                        <button type="button" onclick="setResumoQuickFilter('mes')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Este mês</button>
+                        <button type="button" onclick="setResumoQuickFilter('tudo')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Tudo</button>
+                    </div>
+                    <button type="button" onclick="reloadResumoData()" class="ml-auto text-[10px] font-bold text-brand-600 flex items-center gap-1 hover:text-brand-800 p-2">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Atualizar dados
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100">
+                    <div class="multiselect relative">
+                        <label class="section-label">Parceiro</label>
+                        <button type="button" onclick="toggleMultiSelect('parceiro')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                            <span id="resumoFiltroParceiroLabel" class="truncate">Todos</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        </button>
+                        <div id="resumoFiltroParceiroPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                    </div>
+                    <div class="multiselect relative">
+                        <label class="section-label">Produto</label>
+                        <button type="button" onclick="toggleMultiSelect('produto')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                            <span id="resumoFiltroProdutoLabel" class="truncate">Todos</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        </button>
+                        <div id="resumoFiltroProdutoPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                    </div>
+                    <div class="multiselect relative">
+                        <label class="section-label">Colaborador</label>
+                        <button type="button" onclick="toggleMultiSelect('colaborador')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                            <span id="resumoFiltroColaboradorLabel" class="truncate">Todos</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        </button>
+                        <div id="resumoFiltroColaboradorPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
+                    <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" id="resumoMostrarColaborador" onchange="toggleResumoColaborador()" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Mostrar colaborador na tabela</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input type="checkbox" id="resumoMostrarKg" onchange="toggleResumoKg()" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0">
+                        <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Mostrar kg entregue na tabela</span>
+                    </label>
+                    <button type="button" onclick="limparFiltrosResumo()" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline">Limpar filtros</button>
+                </div>
+
+                <div class="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                    <span class="pulse-dot w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span class="text-[10px] font-bold text-green-700 uppercase tracking-wide">Ao vivo</span>
+                    <span class="text-[10px] text-slate-400 font-medium">— atualiza sozinho assim que uma entrega ou lote é salvo</span>
+                    <span id="resumoUltimaAtualizacao" class="text-[10px] text-slate-400 font-medium ml-auto"></span>
+                </div>
+            </div>
+
+            <div id="resumoLoading" class="text-center text-slate-400 text-xs italic py-10">
+                Carregando histórico...
+            </div>
+
+            <div id="resumoContent" class="hidden space-y-5">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div id="resumoStatRecebidas"></div>
+                    <div id="resumoStatProcessadas"></div>
+                    <div id="resumoStatPendente"></div>
+                    <div id="resumoStatItens"></div>
+                </div>
+
+                <div>
+                    <span id="resumoTableTitle" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Data da Colheita · Parceiro · Entregue · Não Processado</span>
+                    <div id="resumoTable" class="rounded-xl border border-slate-200 overflow-x-auto"></div>
+                </div>
+            </div>
+
+            <div id="resumoEmpty" class="hidden text-center text-slate-400 text-xs italic py-10">
+                Nenhuma entrega encontrada para o período selecionado.
+            </div>
+        </div>
+    </div>
+
             </div>
         </div>
     </div>
@@ -446,190 +732,62 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         </div>
     </div>
 
-    <!-- MODAL DE RESUMO GERAL -->
-    <div id="resumoModal" class="fixed inset-0 bg-white z-[65] hidden flex-col">
-        <div class="form-card-header !rounded-none sticky top-0 z-10 shrink-0">
-            <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-50 border border-brand-100 shrink-0">
-                <i data-lucide="layout-dashboard" class="w-5 h-5 text-brand-600"></i>
+    <!-- MODAL DE REGISTRAR BAIXA DE ESTOQUE -->
+    <div id="baixaEstoqueModal" class="fixed inset-0 bg-black/60 z-[65] hidden flex justify-center items-center backdrop-blur-sm transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto hide-scrollbar">
+            <div class="form-card-header !rounded-t-2xl !rounded-b-none sticky top-0 z-10">
+                <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-50 border border-brand-100 shrink-0">
+                    <i data-lucide="minus-circle" class="w-5 h-5 text-brand-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-base font-black text-slate-800 leading-tight">Registrar baixa</h2>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Parceiro, produto e quantidade que saíram do estoque</p>
+                </div>
+                <button type="button" onclick="toggleBaixaEstoqueForm(false)" title="Fechar" class="text-slate-400 hover:text-slate-700 shrink-0">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
             </div>
-            <div class="flex-1">
-                <h2 class="text-base font-black text-slate-800 leading-tight">Resumo & Estoque</h2>
-                <p class="text-[11px] text-slate-500 font-medium mt-0.5">Acompanhamento em tempo real do packing</p>
-            </div>
-            <button type="button" onclick="hideResumoModal()" class="text-slate-400 hover:text-slate-700 shrink-0">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
 
-        <div class="flex gap-1.5 px-4 sm:px-6 pt-3 border-b border-slate-200 sticky top-[65px] z-10 bg-white shrink-0" id="resumoModalTabs">
-            <button type="button" onclick="switchResumoModalTab('resumo')" data-tab="resumo" class="px-4 py-2 rounded-t-lg text-xs font-bold uppercase flex items-center gap-1.5 transition-colors">
-                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Visão Geral
-            </button>
-            <button type="button" onclick="switchResumoModalTab('estoque')" data-tab="estoque" class="px-4 py-2 rounded-t-lg text-xs font-bold uppercase flex items-center gap-1.5 transition-colors">
-                <i data-lucide="boxes" class="w-3.5 h-3.5"></i> Estoque de Caixas
-            </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto">
-            <div id="resumoPainel" class="p-4 sm:p-6 space-y-5">
-                <div class="rounded-xl border border-slate-200 p-3">
-                    <div class="flex flex-wrap items-end gap-2">
-                        <div>
-                            <label class="section-label">De</label>
-                            <input type="date" id="resumoDataInicio" onchange="applyResumoFilter()" class="p-2 border font-semibold text-xs">
-                        </div>
-                        <div>
-                            <label class="section-label">Até</label>
-                            <input type="date" id="resumoDataFim" onchange="applyResumoFilter()" class="p-2 border font-semibold text-xs">
-                        </div>
-                        <div class="flex gap-1.5 flex-wrap">
-                            <button type="button" onclick="setResumoQuickFilter('hoje')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Hoje</button>
-                            <button type="button" onclick="setResumoQuickFilter('7dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">7 dias</button>
-                            <button type="button" onclick="setResumoQuickFilter('mes')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Este mês</button>
-                            <button type="button" onclick="setResumoQuickFilter('tudo')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Tudo</button>
-                        </div>
-                        <button type="button" onclick="reloadResumoData()" class="ml-auto text-[10px] font-bold text-brand-600 flex items-center gap-1 hover:text-brand-800 p-2">
-                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Atualizar dados
+            <div class="p-5 space-y-2">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="relative">
+                        <select id="baixaEstoqueProdutor" onchange="onBaixaEstoqueProdutorChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
+                            <option value="" selected disabled hidden>Parceiro...</option>
+                        </select>
+                        <button type="button" id="baixaEstoqueProdutorClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueProdutor')" title="Limpar parceiro" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100">
-                        <div class="multiselect relative">
-                            <label class="section-label">Parceiro</label>
-                            <button type="button" onclick="toggleMultiSelect('parceiro')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
-                                <span id="resumoFiltroParceiroLabel" class="truncate">Todos</span>
-                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                            </button>
-                            <div id="resumoFiltroParceiroPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
-                        </div>
-                        <div class="multiselect relative">
-                            <label class="section-label">Produto</label>
-                            <button type="button" onclick="toggleMultiSelect('produto')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
-                                <span id="resumoFiltroProdutoLabel" class="truncate">Todos</span>
-                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                            </button>
-                            <div id="resumoFiltroProdutoPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
-                        </div>
-                        <div class="multiselect relative">
-                            <label class="section-label">Colaborador</label>
-                            <button type="button" onclick="toggleMultiSelect('colaborador')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
-                                <span id="resumoFiltroColaboradorLabel" class="truncate">Todos</span>
-                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                            </button>
-                            <div id="resumoFiltroColaboradorPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
-                        </div>
+                    <div class="relative">
+                        <select id="baixaEstoqueProduto" onchange="onBaixaEstoqueProdutoChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
+                            <option value="" selected disabled hidden>Selecione</option>
+                        </select>
+                        <button type="button" id="baixaEstoqueProdutoClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueProduto')" title="Limpar produto" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
-
-                    <div class="flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
-                        <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input type="checkbox" id="resumoMostrarColaborador" onchange="toggleResumoColaborador()" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0">
-                            <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Mostrar colaborador na tabela</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input type="checkbox" id="resumoMostrarKg" onchange="toggleResumoKg()" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0">
-                            <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Mostrar kg entregue na tabela</span>
-                        </label>
-                        <button type="button" onclick="limparFiltrosResumo()" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline">Limpar filtros</button>
-                    </div>
-
-                    <div class="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
-                        <span class="pulse-dot w-2 h-2 bg-green-500 rounded-full"></span>
-                        <span class="text-[10px] font-bold text-green-700 uppercase tracking-wide">Ao vivo</span>
-                        <span class="text-[10px] text-slate-400 font-medium">— atualiza sozinho assim que uma entrega ou lote é salvo</span>
-                        <span id="resumoUltimaAtualizacao" class="text-[10px] text-slate-400 font-medium ml-auto"></span>
-                    </div>
-                </div>
-
-                <div id="resumoLoading" class="text-center text-slate-400 text-xs italic py-10">
-                    Carregando histórico...
-                </div>
-
-                <div id="resumoContent" class="hidden space-y-5">
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div id="resumoStatRecebidas"></div>
-                        <div id="resumoStatProcessadas"></div>
-                        <div id="resumoStatPendente"></div>
-                        <div id="resumoStatItens"></div>
-                    </div>
-
-                    <div>
-                        <span id="resumoTableTitle" class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Data da Colheita · Parceiro · Entregue · Não Processado</span>
-                        <div id="resumoTable" class="rounded-xl border border-slate-200 overflow-x-auto"></div>
-                    </div>
-                </div>
-
-                <div id="resumoEmpty" class="hidden text-center text-slate-400 text-xs italic py-10">
-                    Nenhuma entrega encontrada para o período selecionado.
-                </div>
-            </div>
-
-            <div id="estoquePainel" class="hidden p-4 sm:p-6 space-y-5">
-
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    <div id="estoqueKpiTotal"></div>
-                    <div id="estoqueKpiProcessado"></div>
-                    <div id="estoqueKpiNaoProcessado"></div>
-                    <div id="estoqueKpiFiletado"></div>
-                    <div id="estoqueKpiParceiros"></div>
-                </div>
-
-                <div class="rounded-xl border border-slate-200 p-3">
-                    <label class="section-label"><i data-lucide="minus-circle" class="w-3 h-3"></i> Registrar baixa</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <div class="relative">
-                            <select id="baixaEstoqueProdutor" onchange="onBaixaEstoqueProdutorChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
-                                <option value="" selected disabled hidden>Parceiro...</option>
-                            </select>
-                            <button type="button" id="baixaEstoqueProdutorClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueProdutor')" title="Limpar parceiro" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
-                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                        <div class="relative">
-                            <select id="baixaEstoqueProduto" onchange="onBaixaEstoqueProdutoChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
-                                <option value="" selected disabled hidden>Selecione</option>
-                            </select>
-                            <button type="button" id="baixaEstoqueProdutoClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueProduto')" title="Limpar produto" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
-                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                        <div class="relative">
-                            <select id="baixaEstoqueDestino" onchange="onBaixaEstoqueDestinoChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
-                                <option value="" selected disabled hidden>Destino (opcional)...</option>
-                            </select>
-                            <button type="button" id="baixaEstoqueDestinoClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueDestino')" title="Limpar destino" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
-                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                        <div>
-                            <input type="number" id="baixaEstoqueQuantidade" min="1" step="1" placeholder="Qtd" oninput="renderBaixaEstoquePreview()" class="w-full p-2.5 border font-bold">
-                        </div>
-                    </div>
-
-                    <div id="baixaEstoquePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5"></div>
-
-                    <div class="grid grid-cols-2 gap-2 mt-2">
-                        <input type="date" id="baixaEstoqueData" class="w-full p-2.5 border font-semibold">
-                        <input type="text" id="baixaEstoqueObservacao" placeholder="Obs. (opcional)" class="w-full p-2.5 border font-semibold">
-                    </div>
-                    <button type="button" onclick="registrarBaixaEstoque()" class="add-btn mt-2">
-                        <i data-lucide="minus" class="w-4 h-4"></i> Dar baixa no estoque
-                    </button>
-                </div>
-
-                <div id="estoqueLoading" class="text-center text-slate-400 text-xs italic py-10">
-                    Carregando estoque...
-                </div>
-
-                <div id="estoqueContent" class="hidden space-y-5">
-                    <div>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Saldo atual por parceiro / produto</span>
-                        <div id="estoqueSaldoTable" class="rounded-xl border border-slate-200 overflow-x-auto"></div>
+                    <div class="relative">
+                        <select id="baixaEstoqueDestino" onchange="onBaixaEstoqueDestinoChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
+                            <option value="" selected disabled hidden>Destino (opcional)...</option>
+                        </select>
+                        <button type="button" id="baixaEstoqueDestinoClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueDestino')" title="Limpar destino" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
                     <div>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Histórico de baixas</span>
-                        <div id="estoqueHistorico" class="rounded-xl border border-slate-200 divide-y divide-slate-100"></div>
+                        <input type="number" id="baixaEstoqueQuantidade" min="1" step="1" placeholder="Qtd" oninput="renderBaixaEstoquePreview()" class="w-full p-2.5 border font-bold">
                     </div>
                 </div>
+
+                <div id="baixaEstoquePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5"></div>
+
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <input type="date" id="baixaEstoqueData" class="w-full p-2.5 border font-semibold">
+                    <input type="text" id="baixaEstoqueObservacao" placeholder="Obs. (opcional)" class="w-full p-2.5 border font-semibold">
+                </div>
+                <button type="button" onclick="registrarBaixaEstoque()" class="add-btn mt-2 !bg-brand-500 !text-white !border-solid hover:!bg-brand-600">
+                    <i data-lucide="minus" class="w-4 h-4"></i> Dar baixa no estoque
+                </button>
             </div>
         </div>
     </div>
@@ -1014,7 +1172,72 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         }
         applyTheme(localStorage.getItem(THEME_KEY) || '');
 
+        // Menu lateral: sempre visível/fixo (padrão) ou "autohide" (some pra
+        // uma tirinha fina na borda e só reaparece ao passar o mouse em cima).
+        // Alternado a qualquer momento pelo botão de pin no topbar (não fica
+        // preso dentro de Configurações) — mesmo padrão de persistência do
+        // tema, guardado no localStorage.
+        const SIDEBAR_MODE_KEY = 'spg_produtividade_sidebar_mode';
+        function applySidebarMode(mode) {
+            document.body.classList.toggle('sidebar-autohide', mode === 'autohide');
+            const btn = document.getElementById('sidebarModeToggleBtn');
+            if (!btn) return;
+            const autohide = mode === 'autohide';
+            btn.querySelector('[data-lucide]')?.setAttribute('data-lucide', autohide ? 'pin-off' : 'pin');
+            btn.title = autohide
+                ? 'Menu lateral automático — clique para fixar sempre visível'
+                : 'Menu lateral fixo — clique para ocultar automaticamente';
+            if (window.lucide) lucide.createIcons();
+        }
+        function toggleSidebarMode() {
+            const atual = localStorage.getItem(SIDEBAR_MODE_KEY) || 'visible';
+            const proximo = atual === 'autohide' ? 'visible' : 'autohide';
+            localStorage.setItem(SIDEBAR_MODE_KEY, proximo);
+            applySidebarMode(proximo);
+        }
+        applySidebarMode(localStorage.getItem(SIDEBAR_MODE_KEY) || 'visible');
+
         let cadastros = { colaboradores: [], produtores: [], produtos: [], destinos: [] };
+
+        // Página ativa do app shell (sidebar): 'inicio' | 'estoque' | 'movimentacoes' | 'relatorios'.
+        // Configurações ainda não tem página própria — o clique nela abre o
+        // modal já existente direto, sem passar por switchPage.
+        let paginaAtiva = 'inicio';
+        const PAGINAS_INFO = {
+            inicio: { titulo: 'Resumo & Estoque', subtitulo: 'Acompanhamento em tempo real do estoque' },
+            estoque: { titulo: 'Entregas', subtitulo: 'Lance parceiro, colheita e caixas, depois os lotes processados' },
+            movimentacoes: { titulo: 'Movimentações', subtitulo: 'Linha do tempo de entregas, lotes e baixas' },
+            relatorios: { titulo: 'Relatórios', subtitulo: 'Filtra e exporta o resumo de entregas por período' }
+        };
+
+        function switchPage(pagina) {
+            paginaAtiva = pagina;
+            ['inicio', 'estoque', 'movimentacoes', 'relatorios'].forEach(p => {
+                document.getElementById('page' + capitalize(p)).classList.toggle('hidden', p !== pagina);
+            });
+            document.querySelectorAll('#appSidebarNav button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.page === pagina);
+            });
+
+            const info = PAGINAS_INFO[pagina];
+            document.getElementById('topbarTitulo').innerText = info.titulo;
+            document.getElementById('topbarSubtitulo').innerText = info.subtitulo;
+
+            // O botão "Dar baixa" só faz sentido na página Início (é lá que mora a
+            // tabela de saldo); "Compartilhar Resumo" só na página Estoque (é onde
+            // fica o card de resumo/preview que ele exporta como imagem).
+            document.getElementById('baixaEstoqueModal').classList.add('hidden');
+            document.getElementById('baixaEstoqueModal').classList.remove('flex');
+            document.getElementById('baixaEstoqueToggleBtn').classList.toggle('hidden', pagina !== 'inicio');
+            document.getElementById('baixaEstoqueToggleBtn').classList.toggle('inline-flex', pagina === 'inicio');
+            document.getElementById('compartilharResumoBtn').classList.toggle('hidden', pagina !== 'estoque');
+            document.getElementById('compartilharResumoBtn').classList.toggle('inline-flex', pagina === 'estoque');
+
+            if (pagina === 'relatorios') openRelatoriosPage();
+            if (pagina === 'movimentacoes') renderMovimentacoesPage();
+
+            lucide.createIcons();
+        }
 
         function todayLocalDateStr() {
             const today = new Date();
@@ -1065,9 +1288,23 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 document.getElementById('configBanner').classList.remove('hidden');
             }
 
+            switchPage('inicio');
             loadCadastros();
             setEntregasQuickFilter('hoje');
             subscribeEntregasRealtime();
+
+            // A página Início é permanente agora (não um modal), então os dados e
+            // as subscriptions realtime que ela e a página Relatórios precisam
+            // (allEntregas/allProcessamentos + estoqueProcessamentos/allSaidasEstoque)
+            // já sobem no carregamento do app, em vez de só quando um modal abria.
+            if (isSupabaseConfigured) {
+                Promise.all([reloadResumoData(), loadEstoqueData()]).then(() => {
+                    renderInicioPage();
+                    renderMovimentacoesPage();
+                    subscribeResumoRealtime();
+                    subscribeEstoqueRealtime();
+                });
+            }
         });
 
         // ---------- Cadastros (colaboradores / parceiros(produtores) / produtos vindos do Supabase) ----------
@@ -1090,7 +1327,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 populateResumoFiltros();
                 if (estoqueLoaded) {
                     populateEstoqueSelects();
-                    renderEstoqueModal();
+                    renderInicioPage();
                 }
             } catch (err) {
                 console.error('Erro ao carregar cadastros:', err);
@@ -1231,6 +1468,28 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             return err && (err.code === '23505' || (err.message || '').includes('duplicate key'));
         }
 
+        // Nome do cadastro (produto/parceiro/colaborador/destino) é salvo como
+        // texto livre nas outras tabelas (não é FK) — renomear só o cadastro
+        // deixaria as entregas/lotes/baixas já lançados com o nome antigo.
+        // Por isso, ao renomear, o nome antigo também é atualizado nessas
+        // colunas pra tudo (histórico incluso) refletir o nome novo.
+        const CADASTRO_RENAME_CASCADE = {
+            produtos: [
+                { table: 'processamentos', column: 'produto' },
+                { table: 'estoque_saidas', column: 'produto' }
+            ],
+            produtores: [
+                { table: 'entregas', column: 'produtor' },
+                { table: 'estoque_saidas', column: 'produtor' }
+            ],
+            colaboradores: [
+                { table: 'processamentos', column: 'colaborador' }
+            ],
+            destinos: [
+                { table: 'estoque_saidas', column: 'destino' }
+            ]
+        };
+
         async function editCadastroItem(campo, valorAntigo) {
             const novoValor = await showPromptModal('Editar valor', valorAntigo);
             if (novoValor === null) return;
@@ -1244,6 +1503,12 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             try {
                 const { error } = await db.from('cadastros').update({ valor: trimmed }).eq('tipo', campo).eq('valor', valorAntigo);
                 if (error) throw error;
+
+                for (const alvo of CADASTRO_RENAME_CASCADE[campo] || []) {
+                    const { error: cascadeErr } = await db.from(alvo.table).update({ [alvo.column]: trimmed }).eq(alvo.column, valorAntigo);
+                    if (cascadeErr) throw cascadeErr;
+                }
+
                 await loadCadastros();
             } catch (err) {
                 console.error('Erro ao editar cadastro:', err);
@@ -2024,6 +2289,36 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             `;
         }
 
+        // Card de saldo por produto do dashboard Início — maior que o chip
+        // antigo, com barra de progresso (relativa ao maior saldo entre os
+        // produtos, só pra dar noção de escala — não é uma meta configurada)
+        // e um badge de status de 2 estados (Normal/Crítico, sem inventar um
+        // limite de "estoque baixo" que não existe em lugar nenhum do app).
+        // "negativo" é passado explicitamente (em vez de só checar value < 0)
+        // porque o valor aqui é a soma de TODOS os parceiros — um parceiro
+        // negativo pode ficar escondido atrás do saldo positivo de outro.
+        function estoqueProdutoCardHtml(label, value, negativo, maxAbsSaldo) {
+            const barPct = maxAbsSaldo > 0 ? Math.min(100, Math.round(Math.abs(value) / maxAbsSaldo * 100)) : 0;
+            return `
+                <div class="rounded-xl border border-slate-200 bg-white p-3.5">
+                    <div class="flex items-center gap-2.5 mb-2">
+                        <div class="w-8 h-8 rounded-lg ${negativo ? 'bg-red-50 text-red-600' : 'bg-brand-50 text-brand-600'} flex items-center justify-center shrink-0">
+                            <i data-lucide="package" class="w-4 h-4"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 truncate">${escapeHtml(label)}</span>
+                    </div>
+                    <div class="text-xl font-black ${negativo ? 'text-red-600' : 'text-slate-800'}">${value} cx</div>
+                    <div class="h-1.5 rounded-full bg-slate-100 mt-2.5 overflow-hidden">
+                        <div class="h-full rounded-full ${negativo ? 'bg-red-500' : 'bg-brand-500'}" style="width:${barPct}%"></div>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-2">
+                        <span class="stat-pill ${negativo ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}">${negativo ? 'Crítico' : 'Normal'}</span>
+                        <span class="text-[10px] text-slate-400 font-medium">${negativo ? 'Estoque negativo' : 'Estoque saudável'}</span>
+                    </div>
+                </div>
+            `;
+        }
+
         // Versão maior do statTileHtml — usada nos KPIs de topo da aba Resumo,
         // onde o número precisa ser lido "de relance" (bate o olho e já sabe).
         function kpiTileHtml(icon, chipClass, label, value, valueClass) {
@@ -2040,6 +2335,43 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             `;
         }
 
+        // Calcula a variação percentual de um valor entre ontem e hoje — usada
+        // nos KPIs do dashboard Início. ontem=0 é tratado como "surgiu do nada"
+        // (+100%) quando hoje>0, ou "sem alteração" quando os dois são 0.
+        function trendPercent(hoje, ontem) {
+            if (ontem === 0) return hoje === 0 ? 0 : 100;
+            return Math.round((hoje - ontem) / Math.abs(ontem) * 100);
+        }
+
+        // KPI com selo de tendência (seta + %) vs. o valor de ontem — mesmo
+        // estilo do kpiTileHtml, com uma linha extra embaixo. Verde quando o
+        // valor subiu, vermelho quando caiu, cinza quando não mudou — é só a
+        // direção literal do número, sem julgar se subir é bom ou ruim pra
+        // aquele KPI específico (ex: "Aguardando processamento" caindo é bom,
+        // mas ainda aparece em vermelho por ter caído, igual ao mock-up usado
+        // de referência).
+        function kpiTileTrendHtml(icon, chipClass, label, value, trendPct, valueClass) {
+            const trendIcon = trendPct > 0 ? 'arrow-up' : trendPct < 0 ? 'arrow-down' : 'minus';
+            const trendClass = trendPct > 0 ? 'text-green-600' : trendPct < 0 ? 'text-red-600' : 'text-slate-400';
+            const trendTexto = trendPct === 0 ? 'sem alteração' : 'em relação a ontem';
+            return `
+                <div class="rounded-xl border border-slate-200 p-3.5 sm:p-4 bg-white">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl ${chipClass} flex items-center justify-center shrink-0">
+                            <i data-lucide="${icon}" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 truncate">${label}</div>
+                            <div class="text-2xl sm:text-3xl font-black ${valueClass || 'text-slate-800'} leading-tight">${value}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 mt-2.5 text-[11px] font-bold ${trendClass}">
+                        <i data-lucide="${trendIcon}" class="w-3 h-3"></i> ${Math.abs(trendPct)}% ${trendTexto}
+                    </div>
+                </div>
+            `;
+        }
+
         function updatePreview() {
             const savedCards = parceiroCards.filter(c => c.entregaId !== null);
 
@@ -2051,7 +2383,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             // lote lançado contra ele — não só depois de já ter sido usado.
             const byProduto = {};
             cadastros.produtos.forEach(p => { byProduto[p] = 0; });
-            const byColaborador = {};
+            // colaborador -> Map(produto -> qtd) — pra mostrar não só quanto cada
+            // colaborador processou no total, mas o que exatamente ele fez de
+            // cada produto (ex: "Mateus fez 5 cx de Brócolis 300g e 5 cx de Filetado").
+            const byColaboradorProduto = new Map();
 
             savedCards.forEach(card => {
                 const t = totalsForCard(card);
@@ -2063,15 +2398,18 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 card.lotes.forEach(l => {
                     byProduto[l.produto] = (byProduto[l.produto] || 0) + l.quantidade;
                     const colabKey = l.colaborador || 'Sem colaborador';
-                    byColaborador[colabKey] = (byColaborador[colabKey] || 0) + l.quantidade;
+                    if (!byColaboradorProduto.has(colabKey)) byColaboradorProduto.set(colabKey, new Map());
+                    const prodMap = byColaboradorProduto.get(colabKey);
+                    prodMap.set(l.produto, (prodMap.get(l.produto) || 0) + l.quantidade);
                 });
             });
 
+            // Só os 4 números que mais importam pra entender a situação num olhar —
+            // o detalhe por produto/colaborador já está nas tabelas logo abaixo,
+            // repeti-lo aqui também só empurraria pra baixo o que já é dado.
             document.getElementById('statRecebidas').innerHTML = statTileHtml('package', 'bg-brand-50 text-brand-600', 'Entregues', `${totalRecebidas} cx`);
-            document.getElementById('statProcessadas').innerHTML = statTileHtml('package-check', 'bg-sky-50 text-sky-600', 'Processadas', `${totalProcessadas} cx`);
+            document.getElementById('statProcessadas').innerHTML = statTileHtml('package-check', 'bg-sky-50 text-sky-600', 'Processado', `${totalProcessadas} cx`);
             document.getElementById('statPendente').innerHTML = statTileHtml('hourglass', 'bg-red-50 text-red-600', 'Não Processado', `${totalPendente} cx`, 'text-red-600');
-            document.getElementById('statItens').innerHTML = statTileHtml('list', 'bg-slate-100 text-slate-500', 'Entregas', savedCards.length);
-            document.getElementById('statFiletado').innerHTML = statTileHtml('fish', 'bg-amber-50 text-amber-600', 'Filetado', `${byProduto['Filetado'] || 0} cx`);
             document.getElementById('statKg').innerHTML = statTileHtml('scale', 'bg-brand-50 text-brand-600', 'KG Entregues', `${totalKg.toLocaleString('pt-BR')} kg`);
 
             const emptyEl = document.getElementById('previewEmpty');
@@ -2086,8 +2424,6 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             emptyEl.classList.add('hidden');
             bodyEl.classList.remove('hidden');
 
-            const pct = (v, total) => total > 0 ? `${(v / total * 100).toFixed(1)}%` : '—';
-
             // Uma linha por ENTREGA (não por parceiro agregado): o mesmo parceiro entregando
             // em dias diferentes aparece em linhas separadas, pra mostrar exatamente o que
             // aconteceu em cada data — não um total misturado.
@@ -2095,12 +2431,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 if (a.produtor !== b.produtor) return a.produtor.localeCompare(b.produtor);
                 return a.dataColheita < b.dataColheita ? -1 : a.dataColheita > b.dataColheita ? 1 : 0;
             });
-            const filetadoForCard = card => card.lotes.reduce((s, l) => l.produto === 'Filetado' ? s + Number(l.quantidade || 0) : s, 0);
-            const totalFiletado = entregaRows.reduce((s, card) => s + filetadoForCard(card), 0);
             const produtorHtml = `
                 <table class="report-table">
                     <thead><tr>
-                        <th>Parceiro</th><th>Colheita</th><th class="num">Entregue</th><th class="num">Kg</th><th class="num">Filetado</th><th class="num">Processado</th><th class="num">Não Processado</th><th class="num">% Total</th>
+                        <th>Parceiro</th><th>Colheita</th><th class="num">Entregue</th><th class="num">Processado</th><th class="num">Não Processado</th>
                     </tr></thead>
                     <tbody>
                         ${entregaRows.map(card => {
@@ -2109,22 +2443,16 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                                 <td class="font-bold text-slate-700">${escapeHtml(card.produtor)}</td>
                                 <td class="muted">${isoDateToBR(card.dataColheita)}</td>
                                 <td class="num">${t.recebidas} cx</td>
-                                <td class="num muted">${card.kgRecebidos != null ? card.kgRecebidos.toLocaleString('pt-BR') + ' kg' : '—'}</td>
-                                <td class="num">${filetadoForCard(card)} cx</td>
                                 <td class="num">${t.processadas} cx</td>
                                 <td class="num ${t.pendente > 0 ? 'text-red-600 font-bold' : 'text-green-600'}">${t.pendente}${card.pendenteManual != null ? '*' : ''}</td>
-                                <td class="num">${pct(t.recebidas, totalRecebidas)}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
                     <tfoot><tr>
                         <td>Total</td><td class="muted">—</td>
                         <td class="num">${totalRecebidas} cx</td>
-                        <td class="num muted">—</td>
-                        <td class="num">${totalFiletado} cx</td>
                         <td class="num">${totalProcessadas} cx</td>
                         <td class="num">${totalPendente}</td>
-                        <td class="num">100%</td>
                     </tr></tfoot>
                 </table>
             `;
@@ -2137,22 +2465,51 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 }
                 return `
                     <table class="report-table">
-                        <thead><tr><th>${colLabel}</th><th class="num">Processado</th><th class="num">% Total</th></tr></thead>
+                        <thead><tr><th>${colLabel}</th><th class="num">Processado</th></tr></thead>
                         <tbody>
                             ${rows.map(([k, v]) => `<tr>
                                 <td class="font-bold text-slate-700">${escapeHtml(k)}</td>
                                 <td class="num">${v} cx</td>
-                                <td class="num">${pct(v, total)}</td>
                             </tr>`).join('')}
                         </tbody>
-                        <tfoot><tr><td>Total</td><td class="num">${total} cx</td><td class="num">100%</td></tr></tfoot>
+                        <tfoot><tr><td>Total</td><td class="num">${total} cx</td></tr></tfoot>
+                    </table>
+                `;
+            };
+
+            // Uma linha por colaborador (não por colaborador+produto) — os produtos que
+            // ele processou entram como texto dentro da mesma célula, em vez de rowspan,
+            // pra ficar uma lista curta e rápida de ler numa imagem em vez de uma
+            // planilha densa.
+            const renderColaboradorTable = () => {
+                if (byColaboradorProduto.size === 0) {
+                    return '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhum lote lançado ainda</span></div>';
+                }
+                const colaboradores = [...byColaboradorProduto.entries()].map(([colaborador, prodMap]) => {
+                    const produtos = [...prodMap.entries()].sort((a, b) => b[1] - a[1]);
+                    const total = produtos.reduce((s, [, v]) => s + v, 0);
+                    return { colaborador, produtos, total };
+                }).sort((a, b) => b.total - a.total);
+                const totalGeral = colaboradores.reduce((s, c) => s + c.total, 0);
+
+                const bodyHtml = colaboradores.map(c => `<tr>
+                    <td class="font-bold text-slate-700">${escapeHtml(c.colaborador)}</td>
+                    <td class="muted">${c.produtos.map(([produto, qtd]) => `${escapeHtml(produto)} ${qtd}cx`).join(' · ')}</td>
+                    <td class="num">${c.total} cx</td>
+                </tr>`).join('');
+
+                return `
+                    <table class="report-table">
+                        <thead><tr><th>Colaborador</th><th>Produtos</th><th class="num">Total</th></tr></thead>
+                        <tbody>${bodyHtml}</tbody>
+                        <tfoot><tr><td colspan="2">Total</td><td class="num">${totalGeral} cx</td></tr></tfoot>
                     </table>
                 `;
             };
 
             document.getElementById('summaryByProdutor').innerHTML = produtorHtml;
             document.getElementById('summaryByProduto').innerHTML = renderSimpleTable(byProduto, 'Produto');
-            document.getElementById('summaryByColaborador').innerHTML = renderSimpleTable(byColaborador, 'Colaborador');
+            document.getElementById('summaryByColaborador').innerHTML = renderColaboradorTable();
 
             lucide.createIcons();
         }
@@ -2258,7 +2615,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 produtor: row.produtor,
                 caixasRecebidas: Number(row.caixas_recebidas) || 0,
                 kgRecebidos: row.kg_recebidos != null ? Number(row.kg_recebidos) : null,
-                pendenteManual: row.pendente_manual != null ? Number(row.pendente_manual) : null
+                pendenteManual: row.pendente_manual != null ? Number(row.pendente_manual) : null,
+                createdAt: row.created_at
             };
         }
 
@@ -2285,60 +2643,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             document.getElementById('resumoUltimaAtualizacao').innerText = `Atualizado às ${now.toLocaleTimeString('pt-BR')}`;
         }
 
-        // "Resumo Geral" e "Estoque de Caixas" viraram abas de um único modal
-        // (são basicamente a mesma tela — visão do que foi entregue/processado
-        // e do saldo que sobra em caixas), em vez de dois modais separados.
-        let resumoModalActiveTab = 'resumo';
-
-        async function openResumoModal(tab) {
-            document.getElementById('resumoModal').classList.remove('hidden');
-            document.getElementById('resumoModal').classList.add('flex');
-            switchResumoModalTab(tab || 'resumo');
+        // "Relatórios" (item do menu lateral) troca pra essa página do app
+        // shell via switchPage — os dados (allEntregas/allProcessamentos) e a
+        // subscription realtime já rodam desde o carregamento do app (a
+        // página Início também depende deles), então só precisa reaplicar o
+        // filtro atual, sem recarregar nada.
+        async function openRelatoriosPage() {
             populateResumoFiltros();
-            document.getElementById('baixaEstoqueData').value = todayLocalDateStr();
-            baixaEstoqueLoteSelecionado = null;
-            populateEstoqueSelects();
-            renderBaixaEstoquePreview();
-            lockBodyScroll();
-            lucide.createIcons();
-            await Promise.all([reloadResumoData(), loadEstoqueData()]);
-            subscribeResumoRealtime();
-            subscribeEstoqueRealtime();
+            await reloadResumoData();
         }
-
-        function hideResumoModal() {
-            document.getElementById('resumoModal').classList.add('hidden');
-            document.getElementById('resumoModal').classList.remove('flex');
-            unlockBodyScroll();
-            if (resumoRealtimeChannel) {
-                db.removeChannel(resumoRealtimeChannel);
-                resumoRealtimeChannel = null;
-            }
-            if (estoqueRealtimeChannel) {
-                db.removeChannel(estoqueRealtimeChannel);
-                estoqueRealtimeChannel = null;
-            }
-        }
-
-        function switchResumoModalTab(tab) {
-            resumoModalActiveTab = tab;
-            document.getElementById('resumoPainel').classList.toggle('hidden', tab !== 'resumo');
-            document.getElementById('estoquePainel').classList.toggle('hidden', tab !== 'estoque');
-            document.querySelectorAll('#resumoModalTabs button').forEach(btn => {
-                const active = btn.dataset.tab === tab;
-                btn.classList.toggle('bg-brand-50', active);
-                btn.classList.toggle('text-brand-700', active);
-                btn.classList.toggle('border-b-2', active);
-                btn.classList.toggle('border-brand-600', active);
-                btn.classList.toggle('text-slate-500', !active);
-                btn.classList.toggle('hover:text-slate-700', !active);
-            });
-        }
-
-        // Mantido só pro botão "Estoque" da navbar continuar funcionando —
-        // abre o mesmo modal, já na aba de Estoque.
-        function openEstoqueModal() { openResumoModal('estoque'); }
-        function hideEstoqueModal() { hideResumoModal(); }
 
         function subscribeResumoRealtime() {
             if (!isSupabaseConfigured || resumoRealtimeChannel) return;
@@ -2350,6 +2663,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     if (!allEntregas.some(e => e.id === mapped.id)) allEntregas.push(mapped);
                     applyResumoFilter();
                     markResumoAtualizado();
+                    renderMovimentacoesPage();
                 })
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'entregas' }, payload => {
                     const idx = allEntregas.findIndex(e => e.id === payload.new.id);
@@ -2357,6 +2671,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     allEntregas[idx] = mapEntregaRowBR(payload.new);
                     applyResumoFilter();
                     markResumoAtualizado();
+                    renderMovimentacoesPage();
                 })
                 .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'entregas' }, payload => {
                     // Também tira do cache os lotes daquela entrega (apagados em cascata no banco).
@@ -2364,12 +2679,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     allProcessamentos = allProcessamentos.filter(p => p.entregaId !== payload.old.id);
                     applyResumoFilter();
                     markResumoAtualizado();
+                    renderMovimentacoesPage();
                 })
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'processamentos' }, payload => {
                     const mapped = mapProcessamentoRow(payload.new);
                     if (!allProcessamentos.some(p => p.id === mapped.id)) allProcessamentos.push(mapped);
                     applyResumoFilter();
                     markResumoAtualizado();
+                    renderMovimentacoesPage();
                 })
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'processamentos' }, payload => {
                     const idx = allProcessamentos.findIndex(p => p.id === payload.new.id);
@@ -2377,11 +2694,13 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     allProcessamentos[idx] = mapProcessamentoRow(payload.new);
                     applyResumoFilter();
                     markResumoAtualizado();
+                    renderMovimentacoesPage();
                 })
                 .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'processamentos' }, payload => {
                     allProcessamentos = allProcessamentos.filter(p => p.id !== payload.old.id);
                     applyResumoFilter();
                     markResumoAtualizado();
+                    renderMovimentacoesPage();
                 })
                 .subscribe();
         }
@@ -2761,6 +3080,11 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         // Data do lote (colheita) de onde a baixa escolhida vai sair — obrigatório
         // preencher quando o parceiro/produto tem mais de um lote em aberto.
         let baixaEstoqueLoteSelecionado = null;
+        // Filtro rápido de período do painel "Histórico de baixas" do Início.
+        let estoqueHistoricoPeriodo = 'tudo';
+        // Parceiros com o grupo colapsado na tabela detalhada do Início (clique
+        // na linha de seção pra expandir/recolher as linhas de produto dele).
+        let estoqueParceirosColapsados = new Set();
 
         function mapSaidaRow(row) {
             return {
@@ -3000,7 +3324,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 });
                 allSaidasEstoque = (saidasRes.data || []).map(mapSaidaRow);
                 estoqueLoaded = true;
-                renderEstoqueModal();
+                // loadCadastros() só popula os selects de baixa quando o estoque já
+                // tinha carregado antes dele (senão fica pra próxima vez que cadastros
+                // recarregar); como as duas cargas rodam em paralelo no início do app e
+                // essa aqui costuma demorar mais (3 queries), o estoque geralmente
+                // termina depois — então popula aqui também, garantindo que os selects
+                // não fiquem vazios esperando um segundo carregamento de cadastros.
+                populateEstoqueSelects();
+                renderInicioPage();
             } catch (err) {
                 console.error('Erro ao carregar estoque:', err);
                 document.getElementById('estoqueLoading').classList.add('hidden');
@@ -3018,6 +3349,55 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             estoqueProcessamentos.forEach(p => { if (p.produto) getEntry(p.produtor || '', p.produto).produzido += p.quantidade; });
             allSaidasEstoque.forEach(s => { if (s.produto) getEntry(s.produtor || '', s.produto).baixado += s.quantidade; });
             return saldoMap;
+        }
+
+        // 'DD/MM/YYYY' -> 'YYYY-MM-DD', pra comparar a data da entrega (guardada em
+        // BR) com as datas em ISO de estoqueProcessamentos/allSaidasEstoque.
+        function brToIso(dataBR) {
+            const [d, m, y] = String(dataBR).split('/');
+            return `${y}-${m}-${d}`;
+        }
+
+        // Recalcula os agregados do dashboard Início (saldo total, pendente,
+        // parceiros ativos) como estavam até uma certa data (inclusive) — usado
+        // pra tirar a variação "X% em relação a ontem" dos KPIs sem inventar
+        // número: é o mesmo cálculo de sempre, só que com um corte de data nos
+        // registros que já existem (data_colheita/data da baixa). dataLimiteISO
+        // null = sem corte (hoje, com tudo que já foi lançado).
+        function computeEstoqueSnapshot(dataLimiteISO) {
+            const dentro = dataIso => !dataLimiteISO || !dataIso || dataIso <= dataLimiteISO;
+            const saldoMap = new Map();
+            const getEntry = (produtor, produto) => {
+                const k = estoqueSaldoKey(produtor, produto);
+                if (!saldoMap.has(k)) saldoMap.set(k, { produtor, produto, produzido: 0, baixado: 0 });
+                return saldoMap.get(k);
+            };
+            estoqueProcessamentos.forEach(p => { if (p.produto && dentro(p.data)) getEntry(p.produtor || '', p.produto).produzido += p.quantidade; });
+            allSaidasEstoque.forEach(s => { if (s.produto && dentro(s.data)) getEntry(s.produtor || '', s.produto).baixado += s.quantidade; });
+            const linhas = [...saldoMap.values()];
+            const totalEstoque = linhas.reduce((s, l) => s + (l.produzido - l.baixado), 0);
+            const parceirosAtivos = new Set(linhas.filter(l => (l.produzido - l.baixado) !== 0).map(l => l.produtor)).size;
+
+            const limiteDate = dataLimiteISO ? new Date(dataLimiteISO + 'T23:59:59') : null;
+            const totalPendente = allEntregas.reduce((s, e) => {
+                if (limiteDate && parseBRDate(e.dataColheita) > limiteDate) return s;
+                const processadasAteData = limiteDate
+                    ? allProcessamentos.reduce((sp, p) => sp + (p.entregaId === e.id && p.horaDate <= limiteDate ? p.quantidade : 0), 0)
+                    : statsForEntrega(e.id);
+                return s + calcPendente(e.caixasRecebidas, processadasAteData, e.pendenteManual);
+            }, 0);
+
+            return { totalEstoque, totalPendente, parceirosAtivos };
+        }
+
+        // Conta quantas entregas + lotes processados + baixas aconteceram numa
+        // data específica (ISO) — usado no KPI "Movimentações hoje" e na
+        // variação vs. ontem.
+        function countMovimentacoesNoDia(dataISO) {
+            const entregas = allEntregas.filter(e => brToIso(e.dataColheita) === dataISO).length;
+            const lotes = allProcessamentos.filter(p => dateToInputValue(p.horaDate) === dataISO).length;
+            const baixas = allSaidasEstoque.filter(s => s.data === dataISO).length;
+            return entregas + lotes + baixas;
         }
 
         // Quebra o saldo de um parceiro/produto por data da colheita, mais antiga
@@ -3056,91 +3436,176 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 });
         }
 
-        function renderEstoqueModal() {
+        function renderInicioPage() {
             document.getElementById('estoqueLoading').classList.add('hidden');
             document.getElementById('estoqueContent').classList.remove('hidden');
 
             const saldoMap = computeEstoqueSaldo();
-            const linhas = [...saldoMap.values()].sort((a, b) => {
+            const todasLinhas = [...saldoMap.values()].sort((a, b) => {
                 if (a.produtor !== b.produtor) return a.produtor.localeCompare(b.produtor);
                 return a.produto.localeCompare(b.produto);
             });
 
-            // KPIs do topo do modal — mesmo estilo dos cards do Resumo.
-            const saldoDe = produto => linhas.filter(l => l.produto === produto).reduce((s, l) => s + (l.produzido - l.baixado), 0);
-            const totalEstoque = linhas.reduce((s, l) => s + (l.produzido - l.baixado), 0);
-            const parceirosComEstoque = new Set(linhas.filter(l => (l.produzido - l.baixado) !== 0).map(l => l.produtor)).size;
-            // "Não Processado" aqui é o mesmo total pendente da aba Visão Geral
-            // (caixas entregues que ainda não viraram nenhum produto processado),
-            // não um saldo de produto — por isso usa entregas/processamentos
-            // globais em vez de saldoDe('Não Processado').
-            const totalNaoProcessado = allEntregas.reduce((s, e) => s + calcPendente(e.caixasRecebidas, statsForEntrega(e.id), e.pendenteManual), 0);
-            document.getElementById('estoqueKpiTotal').innerHTML = kpiTileHtml('boxes', 'bg-brand-50 text-brand-600', 'Em estoque', `${totalEstoque} cx`);
-            document.getElementById('estoqueKpiProcessado').innerHTML = kpiTileHtml('package-check', 'bg-sky-50 text-sky-600', 'Processado', `${saldoDe('Processado')} cx`);
-            document.getElementById('estoqueKpiNaoProcessado').innerHTML = kpiTileHtml('hourglass', 'bg-red-50 text-red-600', 'Não Processado', `${totalNaoProcessado} cx`, 'text-red-600');
-            document.getElementById('estoqueKpiFiletado').innerHTML = kpiTileHtml('fish', 'bg-amber-50 text-amber-600', 'Filetado', `${saldoDe('Filetado')} cx`);
-            document.getElementById('estoqueKpiParceiros').innerHTML = kpiTileHtml('users', 'bg-slate-100 text-slate-500', 'Parceiros', `${parceirosComEstoque}`);
-            lucide.createIcons();
+            // ---------- KPIs com variação vs. ontem ----------
+            const hojeISO = todayLocalDateStr();
+            const ontemDate = new Date(); ontemDate.setDate(ontemDate.getDate() - 1);
+            const ontemISO = dateToInputValue(ontemDate);
+            const snapshotHoje = computeEstoqueSnapshot(null);
+            const snapshotOntem = computeEstoqueSnapshot(ontemISO);
+            const movHoje = countMovimentacoesNoDia(hojeISO);
+            const movOntem = countMovimentacoesNoDia(ontemISO);
 
+            document.getElementById('inicioKpiEstoque').innerHTML = kpiTileTrendHtml('boxes', 'bg-brand-50 text-brand-600', 'Em estoque', `${snapshotHoje.totalEstoque} cx`, trendPercent(snapshotHoje.totalEstoque, snapshotOntem.totalEstoque));
+            document.getElementById('inicioKpiPendente').innerHTML = kpiTileTrendHtml('hourglass', 'bg-red-50 text-red-600', 'Aguardando processamento', `${snapshotHoje.totalPendente} cx`, trendPercent(snapshotHoje.totalPendente, snapshotOntem.totalPendente), 'text-red-600');
+            document.getElementById('inicioKpiParceiros').innerHTML = kpiTileTrendHtml('users', 'bg-slate-100 text-slate-500', 'Parceiros ativos', `${snapshotHoje.parceirosAtivos}`, trendPercent(snapshotHoje.parceirosAtivos, snapshotOntem.parceirosAtivos));
+            document.getElementById('inicioKpiMovimentacoes').innerHTML = kpiTileTrendHtml('trending-up', 'bg-sky-50 text-sky-600', 'Movimentações hoje', `${movHoje}`, trendPercent(movHoje, movOntem));
+
+            document.getElementById('topbarUltimaAtualizacao').innerText = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            // ---------- Saldo por produto (cards) ----------
+            const saldoDe = produto => todasLinhas.filter(l => l.produto === produto).reduce((s, l) => s + (l.produzido - l.baixado), 0);
+            // Um produto entra "no vermelho" se ALGUM parceiro estiver negativo nele,
+            // mesmo que o saldo somado de todos os parceiros dê positivo — senão um
+            // parceiro problemático fica escondido atrás do saldo bom de outro.
+            const algumParceiroNegativoEm = produto => todasLinhas.some(l => l.produto === produto && (l.produzido - l.baixado) < 0);
+            const maxAbsSaldo = Math.max(1, ...cadastros.produtos.map(p => Math.abs(saldoDe(p))));
+            document.getElementById('inicioProdutosCards').innerHTML = cadastros.produtos
+                .map(p => estoqueProdutoCardHtml(p, saldoDe(p), algumParceiroNegativoEm(p), maxAbsSaldo))
+                .join('') || '<span class="text-xs text-slate-400 italic">Nenhum produto cadastrado</span>';
+
+            // ---------- filtros da tabela detalhada ----------
+            const filtroParceiroSelect = document.getElementById('inicioFiltroParceiro');
+            const parceiroAtual = filtroParceiroSelect.value;
+            filtroParceiroSelect.innerHTML = '<option value="">Todos os parceiros</option>' + cadastros.produtores.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+            if (cadastros.produtores.includes(parceiroAtual)) filtroParceiroSelect.value = parceiroAtual;
+
+            const filtroProdutoSelect = document.getElementById('inicioFiltroProduto');
+            const produtoAtual = filtroProdutoSelect.value;
+            filtroProdutoSelect.innerHTML = '<option value="">Todos os produtos</option>' + cadastros.produtos.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+            if (cadastros.produtos.includes(produtoAtual)) filtroProdutoSelect.value = produtoAtual;
+
+            const busca = document.getElementById('inicioBusca').value.trim().toLowerCase();
+            const parceiroFiltro = filtroParceiroSelect.value;
+            const produtoFiltro = filtroProdutoSelect.value;
+            const apenasNegativos = document.getElementById('inicioApenasNegativos').checked;
+
+            const linhas = todasLinhas.filter(l => {
+                if (parceiroFiltro && l.produtor !== parceiroFiltro) return false;
+                if (produtoFiltro && l.produto !== produtoFiltro) return false;
+                if (apenasNegativos && (l.produzido - l.baixado) >= 0) return false;
+                if (busca && !`${l.produtor} ${l.produto}`.toLowerCase().includes(busca)) return false;
+                return true;
+            });
+
+            // ---------- Tabela detalhada (agrupada por parceiro, com colapsar) ----------
             const saldoTableEl = document.getElementById('estoqueSaldoTable');
             if (linhas.length === 0) {
-                saldoTableEl.innerHTML = '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhuma caixa produzida ainda</span></div>';
+                saldoTableEl.innerHTML = `<div class="summary-row"><span class="text-xs text-slate-400 italic">${todasLinhas.length === 0 ? 'Nenhuma caixa produzida ainda' : 'Nenhum resultado para os filtros aplicados'}</span></div>`;
             } else {
+                // Uma tabela só (cabeçalho único), com uma linha de seção em negrito
+                // separando cada parceiro (clicável pra colapsar) — em vez de uma
+                // tabela + cabeçalho inteiros repetidos por parceiro, que ficava
+                // poluído com vários parceiros.
+                const porProdutor = new Map();
+                linhas.forEach(l => {
+                    if (!porProdutor.has(l.produtor)) porProdutor.set(l.produtor, []);
+                    porProdutor.get(l.produtor).push(l);
+                });
+
                 let totalProduzido = 0, totalBaixado = 0, totalSaldo = 0;
-                const linhasPorProdutor = {};
-                linhas.forEach(l => { linhasPorProdutor[l.produtor] = (linhasPorProdutor[l.produtor] || 0) + 1; });
+                const bodyHtml = [...porProdutor.entries()].map(([produtor, itens], grupoIdx) => {
+                    let subtotalSaldo = 0;
+                    const colapsado = estoqueParceirosColapsados.has(produtor);
+                    // Sombreia em bloco os grupos de índice ímpar (1º, 3º... fica sem
+                    // sombra; 2º, 4º... ganha fundo levemente cinza) — deixa visível de
+                    // relance onde um parceiro termina e o próximo começa.
+                    const groupShadeClass = grupoIdx % 2 === 1 ? 'group-shade' : '';
+                    const linhasHtml = itens.map(l => {
+                        const saldo = l.produzido - l.baixado;
+                        totalProduzido += l.produzido; totalBaixado += l.baixado; totalSaldo += saldo; subtotalSaldo += saldo;
+                        const saldoClass = saldo < 0 ? 'text-red-600 font-black' : 'text-slate-700 font-black';
+                        const saldoIcon = saldo < 0 ? '<i data-lucide="triangle-alert" class="w-3 h-3 inline -mt-0.5 mr-1"></i>' : '';
 
-                let produtorAnterior = null;
-                const bodyHtml = linhas.map(l => {
-                    const saldo = l.produzido - l.baixado;
-                    totalProduzido += l.produzido; totalBaixado += l.baixado; totalSaldo += saldo;
-                    const saldoClass = saldo < 0 ? 'text-red-600 font-black' : 'text-slate-700 font-black';
+                        // Mostra desde quando tem caixa parada em estoque pra esse
+                        // parceiro/produto — ajuda a notar estoque velho acumulado.
+                        const datasComSaldo = computeEstoqueDetalhePorData(produtor, l.produto).filter(d => d.restante > 0);
+                        const dataMaisAntigaHtml = datasComSaldo.length > 0
+                            ? `<div class="text-[10px] text-slate-400 font-medium mt-0.5">${datasComSaldo.length > 1 ? `desde ${isoDateToBR(datasComSaldo[0].data)} (${datasComSaldo.length} datas)` : `de ${isoDateToBR(datasComSaldo[0].data)}`}</div>`
+                            : '';
 
-                    const primeiraLinha = l.produtor !== produtorAnterior;
-                    produtorAnterior = l.produtor;
-                    const produtorCell = primeiraLinha
-                        ? `<td class="font-bold text-slate-700" rowspan="${linhasPorProdutor[l.produtor]}">${l.produtor ? escapeHtml(l.produtor) : '<span class="italic text-slate-400 font-normal">Sem parceiro</span>'}</td>`
-                        : '';
+                        return `<tr class="cursor-pointer hover:bg-brand-50 ${colapsado ? 'hidden' : ''} ${groupShadeClass} ${saldo < 0 ? 'row-negative' : ''}" data-produtor="${escapeHtml(produtor)}" data-produto="${escapeHtml(l.produto)}" title="Clique pra usar essa linha na baixa">
+                            <td>${escapeHtml(l.produto)}${dataMaisAntigaHtml}</td>
+                            <td class="num">${l.produzido} cx</td>
+                            <td class="num">${l.baixado} cx</td>
+                            <td class="num ${saldoClass}">${saldoIcon}${saldo} cx</td>
+                        </tr>`;
+                    }).join('');
 
-                    // Mostra desde quando tem caixa parada em estoque pra esse
-                    // parceiro/produto — ajuda a notar estoque velho acumulado.
-                    const datasComSaldo = computeEstoqueDetalhePorData(l.produtor, l.produto).filter(d => d.restante > 0);
-                    const dataMaisAntigaHtml = datasComSaldo.length > 0
-                        ? `<div class="text-[10px] text-slate-400 font-medium mt-0.5">${datasComSaldo.length > 1 ? `desde ${isoDateToBR(datasComSaldo[0].data)} (${datasComSaldo.length} datas)` : `de ${isoDateToBR(datasComSaldo[0].data)}`}</div>`
-                        : '';
+                    const subtotalClass = subtotalSaldo < 0 ? 'text-red-600' : 'text-brand-dark';
+                    const secaoHtml = `<tr class="section-row cursor-pointer" data-grupo-produtor="${escapeHtml(produtor)}" title="Clique pra expandir/recolher"><td colspan="4">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="${colapsado ? 'chevron-right' : 'chevron-down'}" class="w-3.5 h-3.5 text-brand-600"></i>
+                                <i data-lucide="user" class="w-3.5 h-3.5 text-brand-600"></i>
+                                ${produtor ? escapeHtml(produtor) : '<span class="italic text-brand-600/70 font-normal">Sem parceiro</span>'}
+                            </span>
+                            <span class="text-[10px] font-bold text-brand-600 uppercase tracking-wide normal-case">Saldo <span class="text-xs font-black ${subtotalClass}">${subtotalSaldo} cx</span></span>
+                        </div>
+                    </td></tr>`;
 
-                    return `<tr class="cursor-pointer hover:bg-brand-50" title="Clique pra usar essa linha na baixa">
-                        ${produtorCell}
-                        <td>${escapeHtml(l.produto)}${dataMaisAntigaHtml}</td>
-                        <td class="num">${l.produzido} cx</td>
-                        <td class="num">${l.baixado} cx</td>
-                        <td class="num ${saldoClass}">${saldo} cx</td>
-                    </tr>`;
+                    return secaoHtml + linhasHtml;
                 }).join('');
 
                 saldoTableEl.innerHTML = `
                     <table class="report-table">
-                        <thead><tr><th>Parceiro</th><th>Produto</th><th class="num">Estoque de Caixas</th><th class="num">Saída de Caixas</th><th class="num">Saldo</th></tr></thead>
+                        <thead><tr><th>Produto</th><th class="num">Estoque de Caixas</th><th class="num">Saída de Caixas</th><th class="num">Saldo</th></tr></thead>
                         <tbody>${bodyHtml}</tbody>
-                        <tfoot><tr><td colspan="2">Total</td><td class="num">${totalProduzido} cx</td><td class="num">${totalBaixado} cx</td><td class="num">${totalSaldo} cx</td></tr></tfoot>
+                        <tfoot><tr><td>Total (filtrado)</td><td class="num">${totalProduzido} cx</td><td class="num">${totalBaixado} cx</td><td class="num">${totalSaldo} cx</td></tr></tfoot>
                     </table>
                 `;
 
                 // Clicar numa linha já preenche parceiro + produto no formulário de
-                // baixa acima, pra não precisar procurar nos selects de novo.
-                saldoTableEl.querySelectorAll('tbody tr').forEach((tr, idx) => {
-                    tr.addEventListener('click', () => selecionarBaixaEstoque(linhas[idx].produtor, linhas[idx].produto));
+                // baixa acima, pra não precisar procurar nos selects de novo. Clicar
+                // na linha de seção (parceiro) expande/recolhe o grupo em vez disso.
+                saldoTableEl.querySelectorAll('tbody tr[data-produto]').forEach(tr => {
+                    tr.addEventListener('click', () => selecionarBaixaEstoque(tr.dataset.produtor, tr.dataset.produto));
+                });
+                saldoTableEl.querySelectorAll('tr.section-row[data-grupo-produtor]').forEach(tr => {
+                    tr.addEventListener('click', () => toggleEstoqueGrupo(tr.dataset.grupoProdutor));
                 });
             }
 
+            // ---------- Histórico de baixas (com filtro de período rápido) ----------
+            document.querySelectorAll('#estoqueHistoricoFiltros button').forEach(btn => {
+                const ativo = btn.dataset.periodo === estoqueHistoricoPeriodo;
+                btn.classList.toggle('bg-brand-600', ativo);
+                btn.classList.toggle('text-white', ativo);
+                btn.classList.toggle('bg-slate-100', !ativo);
+                btn.classList.toggle('text-slate-600', !ativo);
+            });
+            let corteHistoricoISO = null;
+            if (estoqueHistoricoPeriodo !== 'tudo') {
+                const dias = estoqueHistoricoPeriodo === 'hoje' ? 0 : estoqueHistoricoPeriodo === '7dias' ? 6 : 29;
+                const corte = new Date(); corte.setDate(corte.getDate() - dias);
+                corteHistoricoISO = dateToInputValue(corte);
+            }
+            const saidasFiltradas = allSaidasEstoque.filter(s => !corteHistoricoISO || s.data >= corteHistoricoISO);
+
             const historicoEl = document.getElementById('estoqueHistorico');
-            if (allSaidasEstoque.length === 0) {
-                historicoEl.innerHTML = '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhuma baixa registrada ainda</span></div>';
+            if (saidasFiltradas.length === 0) {
+                historicoEl.innerHTML = '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhuma baixa registrada nesse período</span></div>';
             } else {
-                historicoEl.innerHTML = allSaidasEstoque.map(s => `
-                    <div class="summary-row items-start">
-                        <div class="min-w-0">
-                            <p class="text-xs font-bold text-slate-700">${escapeHtml(s.produto)} <span class="text-slate-400 font-semibold">— ${s.quantidade} cx</span>${s.destino ? ` <span class="text-brand-600">→ ${escapeHtml(s.destino)}</span>` : ''}</p>
+                historicoEl.innerHTML = saidasFiltradas.map(s => `
+                    <div class="summary-row items-start gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="minus-circle" class="w-3.5 h-3.5"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-bold text-slate-700 flex flex-wrap items-center gap-1.5">
+                                <span>${escapeHtml(s.produto)}</span>
+                                <span class="text-slate-400 font-semibold">— ${s.quantidade} cx</span>
+                                ${s.destino ? `<span class="stat-pill bg-brand-50 text-brand-700">${escapeHtml(s.destino)}</span>` : ''}
+                            </p>
                             <p class="text-[10px] text-slate-400 font-medium mt-0.5">${s.produtor ? escapeHtml(s.produtor) + ' · ' : ''}${isoDateToBR(s.data)}${s.loteData ? ` · lote ${isoDateToBR(s.loteData)}` : ''}${s.observacao ? ' · ' + escapeHtml(s.observacao) : ''}</p>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
@@ -3155,15 +3620,155 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             lucide.createIcons();
         }
 
+        function toggleEstoqueGrupo(produtor) {
+            if (estoqueParceirosColapsados.has(produtor)) estoqueParceirosColapsados.delete(produtor);
+            else estoqueParceirosColapsados.add(produtor);
+            renderInicioPage();
+        }
+
+        function setEstoqueHistoricoQuickFilter(periodo) {
+            estoqueHistoricoPeriodo = periodo;
+            renderInicioPage();
+        }
+
+        // =====================================================================
+        // MOVIMENTAÇÕES — linha do tempo unificada de entregas, lotes
+        // processados e baixas de estoque. Não carrega nada por conta própria:
+        // reaproveita allEntregas/allProcessamentos (já mantidos vivos pela
+        // subscription do Relatórios) e allSaidasEstoque (subscription do
+        // Estoque), só combina e ordena os três por data/hora real do evento.
+        // =====================================================================
+        let movimentacoesPeriodo = '7dias';
+
+        function buildMovimentacoesEventos() {
+            const eventos = [];
+
+            allEntregas.forEach(e => {
+                eventos.push({
+                    timestamp: new Date(e.createdAt),
+                    icon: 'truck',
+                    iconClass: 'bg-blue-50 text-blue-500',
+                    titulo: `${e.produtor || 'Sem parceiro'} entregou ${e.caixasRecebidas} cx`,
+                    detalhe: `Colheita de ${e.dataColheita}`
+                });
+            });
+
+            allProcessamentos.forEach(p => {
+                const entrega = allEntregas.find(e => e.id === p.entregaId);
+                eventos.push({
+                    timestamp: p.horaDate,
+                    icon: 'package-check',
+                    iconClass: 'bg-brand-50 text-brand-600',
+                    titulo: `${p.quantidade} cx de ${p.produto || 'produto'} processadas`,
+                    detalhe: [entrega ? entrega.produtor : null, p.colaborador].filter(Boolean).join(' · ')
+                });
+            });
+
+            allSaidasEstoque.forEach(s => {
+                eventos.push({
+                    timestamp: new Date(s.createdAt),
+                    icon: 'minus-circle',
+                    iconClass: 'bg-red-50 text-red-500',
+                    titulo: `Baixa de ${s.quantidade} cx de ${s.produto}`,
+                    detalhe: [s.produtor, s.destino].filter(Boolean).join(' → ')
+                });
+            });
+
+            return eventos.sort((a, b) => b.timestamp - a.timestamp);
+        }
+
+        function renderMovimentacoesPage() {
+            document.querySelectorAll('#movimentacoesFiltros button').forEach(btn => {
+                const ativo = btn.dataset.periodo === movimentacoesPeriodo;
+                btn.classList.toggle('bg-brand-600', ativo);
+                btn.classList.toggle('text-white', ativo);
+                btn.classList.toggle('bg-slate-100', !ativo);
+                btn.classList.toggle('text-slate-600', !ativo);
+            });
+
+            let corte = null;
+            if (movimentacoesPeriodo !== 'tudo') {
+                const dias = movimentacoesPeriodo === 'hoje' ? 0 : movimentacoesPeriodo === '7dias' ? 6 : 29;
+                corte = new Date();
+                corte.setHours(0, 0, 0, 0);
+                corte.setDate(corte.getDate() - dias);
+            }
+
+            const eventos = buildMovimentacoesEventos().filter(ev => !corte || ev.timestamp >= corte);
+            const wrapper = document.getElementById('movimentacoesLista');
+            if (!wrapper) return;
+
+            if (eventos.length === 0) {
+                wrapper.innerHTML = '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhuma movimentação nesse período</span></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            const hojeStr = todayLocalDateStr();
+            const ontem = new Date();
+            ontem.setDate(ontem.getDate() - 1);
+            const ontemStr = dateToInputValue(ontem);
+
+            let grupoAtual = null;
+            let html = '';
+            eventos.forEach(ev => {
+                const diaISO = dateToInputValue(ev.timestamp);
+                if (diaISO !== grupoAtual) {
+                    grupoAtual = diaISO;
+                    const label = diaISO === hojeStr ? 'Hoje' : diaISO === ontemStr ? 'Ontem' : isoDateToBR(diaISO);
+                    html += `<div class="px-3.5 pt-3 pb-1 bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">${label}</div>`;
+                }
+                html += `
+                    <div class="summary-row items-start gap-3">
+                        <div class="w-7 h-7 rounded-lg ${ev.iconClass} flex items-center justify-center shrink-0 mt-0.5">
+                            <i data-lucide="${ev.icon}" class="w-3.5 h-3.5"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-bold text-slate-700">${escapeHtml(ev.titulo)}</p>
+                            ${ev.detalhe ? `<p class="text-[10px] text-slate-400 font-medium mt-0.5">${escapeHtml(ev.detalhe)}</p>` : ''}
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-semibold shrink-0 mt-0.5">${ev.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                `;
+            });
+            wrapper.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function setMovimentacoesQuickFilter(periodo) {
+            movimentacoesPeriodo = periodo;
+            renderMovimentacoesPage();
+        }
+
+        function refreshInicioPage() {
+            loadEstoqueData();
+            loadEntregasEProcessamentos().then(() => renderInicioPage());
+        }
+
+        // Formulário de "Registrar baixa" fica escondido atrás de um botão por
+        // padrão (em vez de sempre exposto) — chame sem argumento pra alternar,
+        // ou com true/false pra forçar abrir/fechar (ex: ao clicar numa linha da
+        // tabela, ou depois de registrar uma baixa com sucesso). Abre como modal
+        // (fundo desfocado) em vez de expandir inline, pra deixar claro que é uma
+        // ação isolada, com foco total no lançamento.
+        function toggleBaixaEstoqueForm(forceOpen) {
+            const modal = document.getElementById('baixaEstoqueModal');
+            const abrir = forceOpen !== undefined ? forceOpen : modal.classList.contains('hidden');
+            modal.classList.toggle('hidden', !abrir);
+            modal.classList.toggle('flex', abrir);
+            if (abrir) lockBodyScroll(); else unlockBodyScroll();
+            lucide.createIcons();
+        }
+
         // Preenche parceiro + produto no formulário a partir de um clique numa
         // linha da tabela de saldo, e foca a quantidade pra já digitar a baixa.
         function selecionarBaixaEstoque(produtor, produto) {
+            toggleBaixaEstoqueForm(true);
             document.getElementById('baixaEstoqueProdutor').value = produtor;
             onBaixaEstoqueProdutorChange();
             document.getElementById('baixaEstoqueProduto').value = produto;
             updateEstoqueSelectClearUI('baixaEstoqueProduto');
             renderBaixaEstoquePreview();
-            document.getElementById('baixaEstoqueProdutor').closest('.rounded-xl').scrollIntoView({ behavior: 'smooth', block: 'start' });
             document.getElementById('baixaEstoqueQuantidade').focus();
         }
 
@@ -3209,7 +3814,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 document.getElementById('baixaEstoqueQuantidade').value = '';
                 document.getElementById('baixaEstoqueObservacao').value = '';
                 baixaEstoqueLoteSelecionado = null;
-                renderEstoqueModal();
+                toggleBaixaEstoqueForm(false);
+                renderInicioPage();
             } catch (err) {
                 console.error('Erro ao registrar baixa de estoque:', err);
                 showMessageModal('Erro', 'Falha ao registrar a baixa. Verifique a conexão com o Supabase.', 'error');
@@ -3232,7 +3838,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 if (error) throw error;
 
                 allSaidasEstoque = allSaidasEstoque.filter(s => s.id !== saidaId);
-                renderEstoqueModal();
+                renderInicioPage();
             } catch (err) {
                 console.error('Erro ao excluir baixa de estoque:', err);
                 showMessageModal('Erro', 'Falha ao excluir a baixa. Verifique a conexão com o Supabase.', 'error');
@@ -3330,7 +3936,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 saida.data = data;
                 saida.observacao = observacao;
                 hideEditSaidaModal();
-                renderEstoqueModal();
+                renderInicioPage();
             } catch (err) {
                 console.error('Erro ao editar baixa de estoque:', err);
                 showMessageModal('Erro', 'Falha ao salvar a edição. Verifique a conexão com o Supabase.', 'error');
@@ -3361,7 +3967,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     const info = estoqueEntregaInfoMap.get(payload.new.entrega_id);
                     if (info === undefined) { loadEstoqueData(); return; }
                     estoqueProcessamentos.push({ produtor: info.produtor || '', data: info.data || '', produto: payload.new.produto || '', quantidade: Number(payload.new.quantidade) || 0 });
-                    renderEstoqueModal();
+                    renderInicioPage();
                 })
                 .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'processamentos' }, () => {
                     loadEstoqueData();
@@ -3372,17 +3978,20 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'estoque_saidas' }, payload => {
                     const mapped = mapSaidaRow(payload.new);
                     if (!allSaidasEstoque.some(s => s.id === mapped.id)) allSaidasEstoque.unshift(mapped);
-                    renderEstoqueModal();
+                    renderInicioPage();
+                    renderMovimentacoesPage();
                 })
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'estoque_saidas' }, payload => {
                     const idx = allSaidasEstoque.findIndex(s => s.id === payload.new.id);
                     if (idx === -1) return;
                     allSaidasEstoque[idx] = mapSaidaRow(payload.new);
-                    renderEstoqueModal();
+                    renderInicioPage();
+                    renderMovimentacoesPage();
                 })
                 .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'estoque_saidas' }, payload => {
                     allSaidasEstoque = allSaidasEstoque.filter(s => s.id !== payload.old.id);
-                    renderEstoqueModal();
+                    renderInicioPage();
+                    renderMovimentacoesPage();
                 })
                 .subscribe();
         }
