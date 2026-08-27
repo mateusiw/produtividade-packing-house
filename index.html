@@ -86,9 +86,6 @@
         .animate-fade-in-down { animation: fadeInDown 0.3s ease-out forwards; }
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        @keyframes pulse-ring { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.25); } }
-        .pulse-dot { animation: pulse-ring 2.5s ease-in-out infinite; }
-
         /* Barra do topo — translúcida com desfoque, flutuando sobre a página com
            cantos arredondados, igual ao .topbar do index.html (em vez da barra
            escura de ponta a ponta de antes). */
@@ -105,23 +102,26 @@
            chega perto do fundo da viewport); fixed mantém a sidebar inteira,
            com o fundo verde-escuro, sempre colada na tela durante o scroll. */
         .app-sidebar { width: 240px; flex-shrink: 0; background: #0e2018; color: #eef4f0;
-            display: flex; flex-direction: column; padding: 20px 14px; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; z-index: 30; }
+            display: flex; flex-direction: column; padding: 20px 14px; position: fixed; left: 0; top: 0; height: 100vh; overflow-x: hidden; overflow-y: auto; z-index: 30;
+            transition: width .18s ease, padding .18s ease; }
         .app-sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 22px; }
         .app-sidebar-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
         .app-sidebar-nav button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 12px;
             color: rgba(238,244,240,.6); font-size: 13px; font-weight: 700; text-align: left; transition: background .15s, color .15s; }
         .app-sidebar-nav button:hover { background: rgba(255,255,255,.07); color: #fff; }
         .app-sidebar-nav button.active { background: var(--brand); color: #fff; }
-        /* Modo "autohide" do menu lateral (opção em Configurações): a sidebar
-           vira posição fixa e fica escondida, deixando só uma tirinha de 10px
-           encostada na borda esquerda — passar o mouse nela (ou nela mesma,
-           já expandida) traz o menu de volta por cima do conteúdo. */
-        body.sidebar-autohide .app-sidebar { position: fixed; left: 0; top: 0; transform: translateX(calc(-100% + 10px));
-            transition: transform .2s ease; box-shadow: 6px 0 24px rgba(0,0,0,.35); }
-        body.sidebar-autohide .app-sidebar:hover,
-        body.sidebar-autohide .app-sidebar:focus-within { transform: translateX(0); }
-        body.sidebar-autohide .app-main { margin-left: 10px; }
-        .app-main { flex: 1; min-width: 0; margin-left: 240px; display: flex; flex-direction: column; }
+        /* Modo "colapsado" do menu lateral — igual o botão de recolher barra
+           lateral do Claude: a sidebar encolhe pra uma tirinha estreita (só
+           ícones, sem texto), em vez de deslizar pra fora da tela. O botão de
+           expandir/recolher (dentro de .app-sidebar-brand) nunca some, porque
+           ele não depende de hover — é a única forma de voltar ao normal. */
+        body.sidebar-autohide .app-sidebar { width: 60px; padding-left: 10px; padding-right: 10px; }
+        body.sidebar-autohide .app-sidebar-brand { justify-content: center; padding-right: 0; }
+        body.sidebar-autohide .app-sidebar-brand img { display: none; }
+        body.sidebar-autohide .sidebar-label { display: none; }
+        body.sidebar-autohide .app-sidebar-nav button { justify-content: center; padding-left: 0; padding-right: 0; }
+        body.sidebar-autohide .app-main { margin-left: 60px; }
+        .app-main { flex: 1; min-width: 0; margin-left: 240px; transition: margin-left .18s ease; display: flex; flex-direction: column; }
         .app-topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
             padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; z-index: 20; }
         .app-content { flex: 1; padding: 20px 24px 40px; }
@@ -132,7 +132,9 @@
             .app-sidebar-nav { flex-direction: row; }
             .app-sidebar-nav button span { display: none; }
             .app-main { margin-left: 0; }
-            body.sidebar-autohide .app-sidebar { position: static; transform: none; box-shadow: none; }
+            body.sidebar-autohide .app-sidebar { width: 100%; padding-left: 14px; padding-right: 14px; }
+            body.sidebar-autohide .app-sidebar-brand { justify-content: flex-start; }
+            body.sidebar-autohide .app-sidebar-brand img { display: block; }
             body.sidebar-autohide .app-main { margin-left: 0; }
             .app-topbar { padding: 12px 16px; }
             .app-content { padding: 14px 16px 32px; }
@@ -168,6 +170,10 @@
 
         .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
         .summary-row:last-child { border-bottom: none; }
+        /* Página dedicada de Baixas — linhas mais altas/espaçadas que o padrão,
+           já que agora tem a tela inteira só pra isso (pedido explícito de
+           deixar "maior" pra ler rápido num checklist de embarque). */
+        #pageBaixas .summary-row { padding: 14px 18px; }
 
         .preview-wrapper { background: var(--surface-3); padding: 16px; border-radius: 24px; border: 1px solid var(--line); }
         #report-card { border-radius: 20px !important; overflow: hidden; box-shadow: var(--shadow-md) !important; }
@@ -309,26 +315,32 @@
         <aside class="app-sidebar">
             <div class="app-sidebar-brand">
                 <img src="logo.png" alt="Logo SPG" class="w-9 h-9 rounded-full object-cover border-2 border-white/20 shrink-0">
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1 sidebar-label">
                     <h1 class="text-xs font-black leading-tight tracking-wide truncate">SPG SEDE</h1>
                     <p class="text-[9px] text-white/50 font-bold uppercase tracking-widest">Produtividade</p>
                 </div>
+                <button type="button" onclick="toggleSidebarMode()" id="sidebarModeToggleBtn" title="Recolher barra lateral (Ctrl+B)" class="flex items-center justify-center w-7 h-7 rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-all active:scale-95 shrink-0">
+                    <i data-lucide="panel-left" class="w-4 h-4"></i>
+                </button>
             </div>
             <nav class="app-sidebar-nav" id="appSidebarNav">
-                <button type="button" onclick="switchPage('inicio')" data-page="inicio">
-                    <i data-lucide="boxes" class="w-4 h-4 shrink-0"></i> <span>Estoque</span>
+                <button type="button" onclick="switchPage('inicio')" data-page="inicio" title="Estoque">
+                    <i data-lucide="boxes" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Estoque</span>
                 </button>
-                <button type="button" onclick="switchPage('estoque')" data-page="estoque">
-                    <i data-lucide="truck" class="w-4 h-4 shrink-0"></i> <span>Entregas</span>
+                <button type="button" onclick="switchPage('estoque')" data-page="estoque" title="Entregas">
+                    <i data-lucide="truck" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Entregas</span>
                 </button>
-                <button type="button" onclick="switchPage('movimentacoes')" data-page="movimentacoes">
-                    <i data-lucide="arrow-left-right" class="w-4 h-4 shrink-0"></i> <span>Movimentações</span>
+                <button type="button" onclick="switchPage('baixas')" data-page="baixas" title="Baixas">
+                    <i data-lucide="list-checks" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Baixas</span>
                 </button>
-                <button type="button" onclick="switchPage('relatorios')" data-page="relatorios">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i> <span>Relatórios</span>
+                <button type="button" onclick="switchPage('movimentacoes')" data-page="movimentacoes" title="Movimentações">
+                    <i data-lucide="arrow-left-right" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Movimentações</span>
                 </button>
-                <button type="button" onclick="openCadastroModal()" data-page="configuracoes">
-                    <i data-lucide="settings" class="w-4 h-4 shrink-0"></i> <span>Configurações</span>
+                <button type="button" onclick="switchPage('relatorios')" data-page="relatorios" title="Relatórios">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Relatórios</span>
+                </button>
+                <button type="button" onclick="openCadastroModal()" data-page="configuracoes" title="Configurações">
+                    <i data-lucide="settings" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Configurações</span>
                 </button>
             </nav>
         </aside>
@@ -341,9 +353,6 @@
                     <p id="topbarSubtitulo" class="text-[11px] text-slate-500 font-medium mt-0.5">Acompanhamento em tempo real do estoque</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <button type="button" onclick="toggleSidebarMode()" id="sidebarModeToggleBtn" title="Alternar modo do menu lateral" class="flex items-center justify-center w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl transition-all active:scale-95 shrink-0">
-                        <i data-lucide="pin" class="w-4 h-4"></i>
-                    </button>
                     <button type="button" onclick="toggleTheme()" id="themeToggleBtn" title="Alternar tema" class="flex items-center justify-center w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl transition-all active:scale-95 shrink-0">
                         <i data-lucide="sun-moon" class="w-4 h-4"></i>
                     </button>
@@ -390,50 +399,46 @@
             </div>
             <div id="inicioProdutosCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
             <div class="flex items-center gap-4 mt-2.5 flex-wrap">
-                <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Normal (saldo ≥ 0)</span>
-                <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Crítico (estoque negativo)</span>
+                <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Normal</span>
+                <span class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> Crítico (abaixo do limite do produto — configurável em Configurações)</span>
             </div>
         </div>
 
-        <div id="inicioDetalhadoSection" class="mt-6 grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5 items-start">
-            <div class="rounded-xl border border-slate-200 overflow-hidden">
-                <div class="p-3 border-b border-slate-200 bg-slate-50 space-y-2">
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Estoque detalhado</span>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <div class="relative flex-1 min-w-[180px]">
-                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
-                            <input type="text" id="inicioBusca" oninput="renderInicioPage()" placeholder="Buscar parceiro ou produto..." class="w-full pl-8 pr-2.5 py-2 border font-semibold text-xs">
-                        </div>
-                        <select id="inicioFiltroParceiro" onchange="renderInicioPage()" class="p-2 border font-semibold text-xs"><option value="">Todos os parceiros</option></select>
-                        <select id="inicioFiltroProduto" onchange="renderInicioPage()" class="p-2 border font-semibold text-xs"><option value="">Todos os produtos</option></select>
-                        <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 cursor-pointer select-none ml-auto">
-                            <input type="checkbox" id="inicioApenasNegativos" onchange="renderInicioPage()" class="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-500 focus:ring-offset-0">
-                            Apenas negativos
-                        </label>
+        <div id="inicioDetalhadoSection" class="mt-6 rounded-xl border border-slate-200 overflow-hidden">
+            <div class="p-3 border-b border-slate-200 bg-slate-50 space-y-2">
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Estoque detalhado</span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative flex-1 min-w-[180px]">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="inicioBusca" oninput="renderInicioPage()" placeholder="Buscar parceiro ou produto..." class="w-full pl-8 pr-2.5 py-2 border font-semibold text-xs">
                     </div>
-                </div>
-
-
-                <div id="estoqueLoading" class="text-center text-slate-400 text-xs italic py-10">
-                    Carregando estoque...
-                </div>
-
-                <div id="estoqueContent" class="hidden">
-                    <div id="estoqueSaldoTable" class="overflow-x-auto"></div>
+                    <div class="multiselect relative">
+                        <button type="button" onclick="toggleMsFiltro('inicio','parceiro')" class="p-2 min-w-[150px] rounded-lg border-[1.5px] border-slate-300 bg-white text-xs font-semibold text-left flex items-center gap-1.5 hover:border-brand-400">
+                            <span id="inicioFiltroParceiroLabel" class="truncate flex-1">Todos os parceiros</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        </button>
+                        <div id="inicioFiltroParceiroPanel" class="hidden absolute z-20 mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                    </div>
+                    <div class="multiselect relative">
+                        <button type="button" onclick="toggleMsFiltro('inicio','produto')" class="p-2 min-w-[150px] rounded-lg border-[1.5px] border-slate-300 bg-white text-xs font-semibold text-left flex items-center gap-1.5 hover:border-brand-400">
+                            <span id="inicioFiltroProdutoLabel" class="truncate flex-1">Todos os produtos</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        </button>
+                        <div id="inicioFiltroProdutoPanel" class="hidden absolute z-20 mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                    </div>
+                    <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 cursor-pointer select-none ml-auto">
+                        <input type="checkbox" id="inicioApenasNegativos" onchange="renderInicioPage()" class="w-3.5 h-3.5 rounded border-slate-300 text-red-600 focus:ring-red-500 focus:ring-offset-0">
+                        Apenas críticos
+                    </label>
                 </div>
             </div>
 
-            <div>
-                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Histórico de baixas</span>
-                <div class="flex gap-1.5 flex-wrap mb-2" id="estoqueHistoricoFiltros">
-                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('hoje')" data-periodo="hoje" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">Hoje</button>
-                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('7dias')" data-periodo="7dias" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">7 dias</button>
-                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('30dias')" data-periodo="30dias" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">30 dias</button>
-                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('tudo')" data-periodo="tudo" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase">Tudo</button>
-                </div>
-                <div id="estoqueHistorico" class="rounded-xl border border-slate-200 divide-y divide-slate-100">
-                    <div class="summary-row"><span class="text-xs text-slate-400 italic">Carregando...</span></div>
-                </div>
+            <div id="estoqueLoading" class="text-center text-slate-400 text-xs italic py-10">
+                Carregando estoque...
+            </div>
+
+            <div id="estoqueContent" class="hidden">
+                <div id="estoqueSaldoTable" class="overflow-x-auto"></div>
             </div>
         </div>
     </div>
@@ -578,6 +583,66 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         </div>
     </div>
 
+    <!-- PÁGINA: BAIXAS (histórico completo de saídas de estoque — checklist de embarque) -->
+    <div id="pageBaixas" class="hidden">
+        <div class="rounded-xl border border-slate-200 p-3 mb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <div class="multiselect relative">
+                    <label class="section-label">Parceiro</label>
+                    <button type="button" onclick="toggleMsFiltro('baixas','parceiro')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                        <span id="baixasFiltroParceiroLabel" class="truncate">Todos</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                    </button>
+                    <div id="baixasFiltroParceiroPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+                <div class="multiselect relative">
+                    <label class="section-label">Destino</label>
+                    <button type="button" onclick="toggleMsFiltro('baixas','destino')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                        <span id="baixasFiltroDestinoLabel" class="truncate">Todos</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                    </button>
+                    <div id="baixasFiltroDestinoPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+                <div class="multiselect relative">
+                    <label class="section-label">Produto</label>
+                    <button type="button" onclick="toggleMsFiltro('baixas','produto')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                        <span id="baixasFiltroProdutoLabel" class="truncate">Todos</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                    </button>
+                    <div id="baixasFiltroProdutoPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+                <div>
+                    <label class="section-label">Agrupar</label>
+                    <select id="estoqueHistoricoAgrupamento" onchange="renderBaixasHistorico()" class="w-full p-2 border font-semibold text-xs">
+                        <option value="">Sem agrupar</option>
+                        <option value="destino">Agrupar por destino</option>
+                        <option value="rastreio">Agrupar por rastreio</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-end gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
+                <div>
+                    <label class="section-label !mb-1">De</label>
+                    <input type="date" id="baixasDataInicio" onchange="renderBaixasHistorico()" class="p-2 border font-semibold text-xs">
+                </div>
+                <div>
+                    <label class="section-label !mb-1">Até</label>
+                    <input type="date" id="baixasDataFim" onchange="renderBaixasHistorico()" class="p-2 border font-semibold text-xs">
+                </div>
+                <div class="flex gap-1.5 flex-wrap" id="estoqueHistoricoFiltros">
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('hoje')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Hoje</button>
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('7dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">7 dias</button>
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('30dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">30 dias</button>
+                    <button type="button" onclick="setEstoqueHistoricoQuickFilter('tudo')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Tudo</button>
+                </div>
+                <button type="button" onclick="limparFiltrosBaixas()" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline ml-auto">Limpar filtros</button>
+            </div>
+        </div>
+        <div id="estoqueHistorico" class="rounded-xl border border-slate-200 divide-y divide-slate-100">
+            <div class="summary-row"><span class="text-xs text-slate-400 italic">Carregando...</span></div>
+        </div>
+    </div>
+
     <!-- PÁGINA: RELATÓRIOS -->
     <div id="pageRelatorios" class="hidden">
         <div id="resumoPainel" class="space-y-5">
@@ -642,9 +707,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 </div>
 
                 <div class="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
-                    <span class="pulse-dot w-2 h-2 bg-green-500 rounded-full"></span>
-                    <span class="text-[10px] font-bold text-green-700 uppercase tracking-wide">Ao vivo</span>
-                    <span class="text-[10px] text-slate-400 font-medium">— atualiza sozinho assim que uma entrega ou lote é salvo</span>
+                    <span class="text-[10px] text-slate-400 font-medium">Atualiza sozinho assim que uma entrega ou lote é salvo</span>
                     <span id="resumoUltimaAtualizacao" class="text-[10px] text-slate-400 font-medium ml-auto"></span>
                 </div>
             </div>
@@ -781,6 +844,21 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                 <div id="baixaEstoquePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5"></div>
 
+                <div class="rounded-lg border border-slate-200 p-2.5 mt-2 space-y-2">
+                    <label class="section-label !mb-0">
+                        <i data-lucide="hash" class="w-3 h-3"></i> Número de rastreio
+                        <i data-lucide="info" class="w-3 h-3 text-slate-300" title="Agrupa baixas diferentes (produtos/parceiros) que saem juntas no mesmo embarque, pra um único destino"></i>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="rastreioBtnNovo" onclick="setRastreioMode('novo')" class="px-3 py-2 rounded-lg text-[11px] font-bold uppercase">Novo rastreio</button>
+                        <button type="button" id="rastreioBtnExistente" onclick="setRastreioMode('existente')" class="px-3 py-2 rounded-lg text-[11px] font-bold uppercase">Agrupar em existente</button>
+                    </div>
+                    <p id="rastreioNovoInfo" class="text-[11px] text-slate-500 font-semibold">Vai criar o rastreio <span class="text-brand-700 font-black" id="rastreioProximoNumero">#1</span></p>
+                    <select id="rastreioExistenteSelect" class="hidden w-full p-2 border font-semibold text-xs">
+                        <option value="">Selecione o rastreio...</option>
+                    </select>
+                </div>
+
                 <div class="grid grid-cols-2 gap-2 mt-2">
                     <input type="date" id="baixaEstoqueData" class="w-full p-2.5 border font-semibold">
                     <input type="text" id="baixaEstoqueObservacao" placeholder="Obs. (opcional)" class="w-full p-2.5 border font-semibold">
@@ -844,6 +922,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 <div>
                     <label class="section-label">Observação — opcional</label>
                     <input type="text" id="editSaidaObservacao" class="w-full p-2.5 border font-semibold">
+                </div>
+                <div>
+                    <label class="section-label"><i data-lucide="hash" class="w-3 h-3"></i> Número de rastreio — opcional</label>
+                    <input type="number" id="editSaidaRastreio" min="1" step="1" placeholder="Ex: 12" class="w-full p-2.5 border font-semibold">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 pt-2">
@@ -947,7 +1029,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
     <!-- MODAL DE GERENCIAR CADASTROS -->
     <div id="cadastroModal" class="fixed inset-0 bg-black/60 z-[65] hidden flex justify-center items-center backdrop-blur-sm transition-opacity duration-300 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto hide-scrollbar">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto hide-scrollbar">
             <div class="form-card-header !rounded-t-2xl !rounded-b-none sticky top-0 z-10">
                 <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-50 border border-brand-100 shrink-0">
                     <i data-lucide="settings" class="w-5 h-5 text-brand-600"></i>
@@ -1073,6 +1155,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <button type="button" onclick="addCadastroItem('produtos')" class="px-4 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-xs uppercase shrink-0">Add</button>
                 </div>
                 <div id="listProdutos" class="flex flex-wrap gap-1.5"></div>
+
+                <div class="pt-3 mt-1 border-t border-slate-100">
+                    <label class="section-label">
+                        <i data-lucide="triangle-alert" class="w-3 h-3"></i> Limite mínimo (crítico abaixo disso)
+                        <i data-lucide="info" class="w-3 h-3 text-slate-300" title="Quantas caixas em estoque esse produto precisa ter, no mínimo, pra não virar 'Crítico' nos cards do Início. 0 = crítico só quando o saldo fica negativo."></i>
+                    </label>
+                    <div id="listProdutoLimites" class="divide-y divide-slate-100"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1172,22 +1262,21 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         }
         applyTheme(localStorage.getItem(THEME_KEY) || '');
 
-        // Menu lateral: sempre visível/fixo (padrão) ou "autohide" (some pra
-        // uma tirinha fina na borda e só reaparece ao passar o mouse em cima).
-        // Alternado a qualquer momento pelo botão de pin no topbar (não fica
-        // preso dentro de Configurações) — mesmo padrão de persistência do
-        // tema, guardado no localStorage.
+        // Menu lateral: expandido (padrão) ou "autohide"/colapsado — encolhe
+        // pra uma tirinha só de ícones (igual o botão de recolher barra
+        // lateral do Claude), sem depender de hover; o botão dentro de
+        // .app-sidebar-brand nunca some, então dá sempre pra expandir de
+        // volta. Mesmo padrão de persistência do tema, guardado no
+        // localStorage.
         const SIDEBAR_MODE_KEY = 'spg_produtividade_sidebar_mode';
         function applySidebarMode(mode) {
             document.body.classList.toggle('sidebar-autohide', mode === 'autohide');
             const btn = document.getElementById('sidebarModeToggleBtn');
             if (!btn) return;
             const autohide = mode === 'autohide';
-            btn.querySelector('[data-lucide]')?.setAttribute('data-lucide', autohide ? 'pin-off' : 'pin');
-            btn.title = autohide
-                ? 'Menu lateral automático — clique para fixar sempre visível'
-                : 'Menu lateral fixo — clique para ocultar automaticamente';
-            if (window.lucide) lucide.createIcons();
+            // Mesmo ícone (panel-left) nos dois estados — só o tooltip muda —
+            // igual o botão de recolher barra lateral do próprio Claude.
+            btn.title = autohide ? 'Expandir barra lateral (Ctrl+B)' : 'Recolher barra lateral (Ctrl+B)';
         }
         function toggleSidebarMode() {
             const atual = localStorage.getItem(SIDEBAR_MODE_KEY) || 'visible';
@@ -1196,8 +1285,22 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             applySidebarMode(proximo);
         }
         applySidebarMode(localStorage.getItem(SIDEBAR_MODE_KEY) || 'visible');
+        // Ctrl+B / Cmd+B alterna o menu lateral — mesmo atalho mostrado no
+        // tooltip do botão de recolher barra lateral do Claude.
+        document.addEventListener('keydown', event => {
+            if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'b') {
+                event.preventDefault();
+                toggleSidebarMode();
+            }
+        });
 
         let cadastros = { colaboradores: [], produtores: [], produtos: [], destinos: [] };
+        // Limite mínimo de estoque por produto (produto -> número de caixas) —
+        // abaixo dele o produto vira "Crítico" nos cards do Início e nas linhas
+        // da tabela detalhada. Sem entrada pra um produto = limite 0 (mesmo
+        // comportamento de antes: só negativo virava crítico).
+        let produtoLimites = {};
+        function limiteDoProduto(produto) { return Number(produtoLimites[produto]) || 0; }
 
         // Página ativa do app shell (sidebar): 'inicio' | 'estoque' | 'movimentacoes' | 'relatorios'.
         // Configurações ainda não tem página própria — o clique nela abre o
@@ -1206,13 +1309,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         const PAGINAS_INFO = {
             inicio: { titulo: 'Resumo & Estoque', subtitulo: 'Acompanhamento em tempo real do estoque' },
             estoque: { titulo: 'Entregas', subtitulo: 'Lance parceiro, colheita e caixas, depois os lotes processados' },
+            baixas: { titulo: 'Baixas', subtitulo: 'Histórico completo de saídas de estoque — funciona como checklist de embarque por destino' },
             movimentacoes: { titulo: 'Movimentações', subtitulo: 'Linha do tempo de entregas, lotes e baixas' },
             relatorios: { titulo: 'Relatórios', subtitulo: 'Filtra e exporta o resumo de entregas por período' }
         };
 
         function switchPage(pagina) {
             paginaAtiva = pagina;
-            ['inicio', 'estoque', 'movimentacoes', 'relatorios'].forEach(p => {
+            ['inicio', 'estoque', 'baixas', 'movimentacoes', 'relatorios'].forEach(p => {
                 document.getElementById('page' + capitalize(p)).classList.toggle('hidden', p !== pagina);
             });
             document.querySelectorAll('#appSidebarNav button').forEach(btn => {
@@ -1224,8 +1328,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             document.getElementById('topbarSubtitulo').innerText = info.subtitulo;
 
             // O botão "Dar baixa" só faz sentido na página Início (é lá que mora a
-            // tabela de saldo); "Compartilhar Resumo" só na página Estoque (é onde
-            // fica o card de resumo/preview que ele exporta como imagem).
+            // tabela de saldo) — a página Baixas é só consulta/histórico, sem ação
+            // de lançar nada nela; "Compartilhar Resumo" só na página Estoque (é
+            // onde fica o card de resumo/preview que ele exporta como imagem).
             document.getElementById('baixaEstoqueModal').classList.add('hidden');
             document.getElementById('baixaEstoqueModal').classList.remove('flex');
             document.getElementById('baixaEstoqueToggleBtn').classList.toggle('hidden', pagina !== 'inicio');
@@ -1298,7 +1403,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             // (allEntregas/allProcessamentos + estoqueProcessamentos/allSaidasEstoque)
             // já sobem no carregamento do app, em vez de só quando um modal abria.
             if (isSupabaseConfigured) {
-                Promise.all([reloadResumoData(), loadEstoqueData()]).then(() => {
+                Promise.all([reloadResumoData(), loadEstoqueData(), loadProdutoLimites()]).then(() => {
                     renderInicioPage();
                     renderMovimentacoesPage();
                     subscribeResumoRealtime();
@@ -1325,6 +1430,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 renderParceiroCards();
                 renderCadastroLists();
                 populateResumoFiltros();
+                populateMsFiltros('baixas');
+                populateMsFiltros('inicio');
                 if (estoqueLoaded) {
                     populateEstoqueSelects();
                     renderInicioPage();
@@ -1421,6 +1528,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             renderBadges('listProdutores', 'produtores', cadastros.produtores);
             renderBadges('listProdutos', 'produtos', cadastros.produtos);
             renderBadges('listDestinos', 'destinos', cadastros.destinos);
+            renderProdutoLimitesList();
             lucide.createIcons();
         }
 
@@ -2292,28 +2400,29 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         // Card de saldo por produto do dashboard Início — maior que o chip
         // antigo, com barra de progresso (relativa ao maior saldo entre os
         // produtos, só pra dar noção de escala — não é uma meta configurada)
-        // e um badge de status de 2 estados (Normal/Crítico, sem inventar um
-        // limite de "estoque baixo" que não existe em lugar nenhum do app).
-        // "negativo" é passado explicitamente (em vez de só checar value < 0)
-        // porque o valor aqui é a soma de TODOS os parceiros — um parceiro
-        // negativo pode ficar escondido atrás do saldo positivo de outro.
-        function estoqueProdutoCardHtml(label, value, negativo, maxAbsSaldo) {
+        // e um badge de status de 2 estados (Normal/Crítico). "Crítico" é abaixo
+        // do limite mínimo configurado pra esse produto em Configurações >
+        // Produtos (0 por padrão = só negativo é crítico). "critico" é passado
+        // explicitamente (em vez de só checar value < limite) porque o valor
+        // aqui é a soma de TODOS os parceiros — um parceiro problemático pode
+        // ficar escondido atrás do saldo bom de outro.
+        function estoqueProdutoCardHtml(label, value, critico, maxAbsSaldo) {
             const barPct = maxAbsSaldo > 0 ? Math.min(100, Math.round(Math.abs(value) / maxAbsSaldo * 100)) : 0;
             return `
                 <div class="rounded-xl border border-slate-200 bg-white p-3.5">
                     <div class="flex items-center gap-2.5 mb-2">
-                        <div class="w-8 h-8 rounded-lg ${negativo ? 'bg-red-50 text-red-600' : 'bg-brand-50 text-brand-600'} flex items-center justify-center shrink-0">
+                        <div class="w-8 h-8 rounded-lg ${critico ? 'bg-red-50 text-red-600' : 'bg-brand-50 text-brand-600'} flex items-center justify-center shrink-0">
                             <i data-lucide="package" class="w-4 h-4"></i>
                         </div>
                         <span class="text-xs font-bold text-slate-600 truncate">${escapeHtml(label)}</span>
                     </div>
-                    <div class="text-xl font-black ${negativo ? 'text-red-600' : 'text-slate-800'}">${value} cx</div>
+                    <div class="text-xl font-black ${critico ? 'text-red-600' : 'text-slate-800'}">${value} cx</div>
                     <div class="h-1.5 rounded-full bg-slate-100 mt-2.5 overflow-hidden">
-                        <div class="h-full rounded-full ${negativo ? 'bg-red-500' : 'bg-brand-500'}" style="width:${barPct}%"></div>
+                        <div class="h-full rounded-full ${critico ? 'bg-red-500' : 'bg-brand-500'}" style="width:${barPct}%"></div>
                     </div>
                     <div class="flex items-center gap-1.5 mt-2">
-                        <span class="stat-pill ${negativo ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}">${negativo ? 'Crítico' : 'Normal'}</span>
-                        <span class="text-[10px] text-slate-400 font-medium">${negativo ? 'Estoque negativo' : 'Estoque saudável'}</span>
+                        <span class="stat-pill ${critico ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}">${critico ? 'Crítico' : 'Normal'}</span>
+                        <span class="text-[10px] text-slate-400 font-medium">${critico ? 'Abaixo do limite' : 'Estoque saudável'}</span>
                     </div>
                 </div>
             `;
@@ -2431,10 +2540,21 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 if (a.produtor !== b.produtor) return a.produtor.localeCompare(b.produtor);
                 return a.dataColheita < b.dataColheita ? -1 : a.dataColheita > b.dataColheita ? 1 : 0;
             });
+            // "Processado" mostra o nome de cada produto (do cadastro) e quantas caixas
+            // saíram dele — em vez de só um número somado — porque é isso que o
+            // pessoal precisa ler rápido: qual produto e quanto, não só um total.
+            // "Não Processado" continua um número só: são caixas cruas que o parceiro
+            // entregou e a equipe ainda não separou em nenhum produto.
+            const produtoBreakdownHtml = card => {
+                if (card.lotes.length === 0) return '<span class="muted">—</span>';
+                const porProduto = new Map();
+                card.lotes.forEach(l => porProduto.set(l.produto, (porProduto.get(l.produto) || 0) + l.quantidade));
+                return [...porProduto.entries()].map(([produto, qtd]) => `${escapeHtml(produto)} ${qtd}cx`).join(' · ');
+            };
             const produtorHtml = `
                 <table class="report-table">
                     <thead><tr>
-                        <th>Parceiro</th><th>Colheita</th><th class="num">Entregue</th><th class="num">Processado</th><th class="num">Não Processado</th>
+                        <th>Parceiro</th><th>Colheita</th><th class="num">Entregue</th><th>Processado</th><th class="num">Não Processado</th>
                     </tr></thead>
                     <tbody>
                         ${entregaRows.map(card => {
@@ -2443,7 +2563,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                                 <td class="font-bold text-slate-700">${escapeHtml(card.produtor)}</td>
                                 <td class="muted">${isoDateToBR(card.dataColheita)}</td>
                                 <td class="num">${t.recebidas} cx</td>
-                                <td class="num">${t.processadas} cx</td>
+                                <td class="muted">${produtoBreakdownHtml(card)}</td>
                                 <td class="num ${t.pendente > 0 ? 'text-red-600 font-bold' : 'text-green-600'}">${t.pendente}${card.pendenteManual != null ? '*' : ''}</td>
                             </tr>`;
                         }).join('')}
@@ -2451,7 +2571,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <tfoot><tr>
                         <td>Total</td><td class="muted">—</td>
                         <td class="num">${totalRecebidas} cx</td>
-                        <td class="num">${totalProcessadas} cx</td>
+                        <td>${totalProcessadas} cx</td>
                         <td class="num">${totalPendente}</td>
                     </tr></tfoot>
                 </table>
@@ -2764,6 +2884,110 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         const resumoFiltroCadastroKey = { parceiro: 'produtores', produto: 'produtos', colaborador: 'colaboradores' };
 
         function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+        // =====================================================================
+        // FILTRO MULTI-SELEÇÃO — componente genérico (dropdown com checkboxes)
+        // reaproveitado pelos filtros de Baixas e do "Estoque detalhado" do
+        // Início. Cada namespace ('baixas', 'inicio'...) guarda seu próprio Set
+        // de valores selecionados por chave de filtro; Set vazio = "Todos".
+        // IDs esperados no HTML: `${namespace}Filtro${Chave}Label/Panel`.
+        // =====================================================================
+        const msFiltros = {};
+        const msFiltroOptions = {};
+        const msFiltroConfig = {};
+
+        function registerMsFiltro(namespace, cadastroKeyByFiltro, defaultLabelByFiltro, onChange) {
+            msFiltros[namespace] = {};
+            msFiltroOptions[namespace] = {};
+            msFiltroConfig[namespace] = { cadastroKeyByFiltro, defaultLabelByFiltro, onChange };
+            Object.keys(cadastroKeyByFiltro).forEach(key => {
+                msFiltros[namespace][key] = new Set();
+                msFiltroOptions[namespace][key] = [];
+            });
+        }
+
+        // Preenche as opções de cada filtro com os cadastros atuais — chamado
+        // sempre que os cadastros (ou o que depende deles) mudam.
+        function populateMsFiltros(namespace) {
+            const config = msFiltroConfig[namespace];
+            if (!config) return;
+            Object.keys(config.cadastroKeyByFiltro).forEach(key => {
+                msFiltroOptions[namespace][key] = cadastros[config.cadastroKeyByFiltro[key]] || [];
+                // Tira da seleção valores que não existem mais no cadastro.
+                msFiltros[namespace][key].forEach(v => {
+                    if (!msFiltroOptions[namespace][key].includes(v)) msFiltros[namespace][key].delete(v);
+                });
+                renderMsFiltroPanel(namespace, key);
+                updateMsFiltroLabel(namespace, key);
+            });
+        }
+
+        function renderMsFiltroPanel(namespace, key) {
+            const panel = document.getElementById(`${namespace}Filtro${capitalize(key)}Panel`);
+            if (!panel) return;
+            const items = msFiltroOptions[namespace][key];
+            const selected = msFiltros[namespace][key];
+            panel.innerHTML = items.length
+                ? items.map((v, idx) => `
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-xs">
+                        <input type="checkbox" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0" ${selected.has(v) ? 'checked' : ''} onchange="toggleMsFiltroValue('${namespace}', '${key}', ${idx}, this.checked)">
+                        <span class="truncate">${escapeHtml(v)}</span>
+                    </label>
+                `).join('')
+                : '<div class="px-3 py-2 text-xs text-slate-400 italic">Nada cadastrado</div>';
+        }
+
+        function updateMsFiltroLabel(namespace, key) {
+            const label = document.getElementById(`${namespace}Filtro${capitalize(key)}Label`);
+            if (!label) return;
+            const selected = msFiltros[namespace][key];
+            const config = msFiltroConfig[namespace];
+            if (selected.size === 0) label.innerText = config.defaultLabelByFiltro[key];
+            else if (selected.size === 1) label.innerText = [...selected][0];
+            else label.innerText = `${selected.size} selecionados`;
+        }
+
+        function toggleMsFiltroValue(namespace, key, idx, checked) {
+            const value = msFiltroOptions[namespace][key][idx];
+            if (checked) msFiltros[namespace][key].add(value);
+            else msFiltros[namespace][key].delete(value);
+            updateMsFiltroLabel(namespace, key);
+            msFiltroConfig[namespace].onChange();
+        }
+
+        function toggleMsFiltro(namespace, key) {
+            Object.keys(msFiltroConfig[namespace].cadastroKeyByFiltro).forEach(k => {
+                const panel = document.getElementById(`${namespace}Filtro${capitalize(k)}Panel`);
+                if (!panel) return;
+                if (k === key) panel.classList.toggle('hidden');
+                else panel.classList.add('hidden');
+            });
+        }
+
+        function limparMsFiltros(namespace) {
+            Object.keys(msFiltros[namespace]).forEach(key => {
+                msFiltros[namespace][key].clear();
+                renderMsFiltroPanel(namespace, key);
+                updateMsFiltroLabel(namespace, key);
+            });
+            msFiltroConfig[namespace].onChange();
+        }
+
+        // Fecha qualquer painel de multi-select genérico aberto ao clicar fora
+        // dele (o painel do Relatórios tem seu próprio listener mais abaixo).
+        document.addEventListener('click', event => {
+            if (event.target.closest('.multiselect')) return;
+            document.querySelectorAll('[id^="baixasFiltro"][id$="Panel"], [id^="inicioFiltro"][id$="Panel"]').forEach(panel => panel.classList.add('hidden'));
+        });
+
+        registerMsFiltro('baixas',
+            { parceiro: 'produtores', destino: 'destinos', produto: 'produtos' },
+            { parceiro: 'Todos', destino: 'Todos', produto: 'Todos' },
+            () => renderBaixasHistorico());
+        registerMsFiltro('inicio',
+            { parceiro: 'produtores', produto: 'produtos' },
+            { parceiro: 'Todos os parceiros', produto: 'Todos os produtos' },
+            () => renderInicioPage());
 
         // Preenche as opções de Parceiro/Produto/Colaborador com os cadastros —
         // chamado ao abrir o resumo e sempre que os cadastros mudam.
@@ -3080,8 +3304,6 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         // Data do lote (colheita) de onde a baixa escolhida vai sair — obrigatório
         // preencher quando o parceiro/produto tem mais de um lote em aberto.
         let baixaEstoqueLoteSelecionado = null;
-        // Filtro rápido de período do painel "Histórico de baixas" do Início.
-        let estoqueHistoricoPeriodo = 'tudo';
         // Parceiros com o grupo colapsado na tabela detalhada do Início (clique
         // na linha de seção pra expandir/recolher as linhas de produto dele).
         let estoqueParceirosColapsados = new Set();
@@ -3096,7 +3318,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 data: row.data,
                 loteData: row.lote_data || null,
                 observacao: row.observacao || '',
-                createdAt: row.created_at
+                createdAt: row.created_at,
+                rastreioNumero: row.rastreio_numero != null ? Number(row.rastreio_numero) : null
             };
         }
 
@@ -3124,6 +3347,65 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             destinoSelect.value = destinoAtual;
 
             ['baixaEstoqueProdutor', 'baixaEstoqueProduto', 'baixaEstoqueDestino'].forEach(updateEstoqueSelectClearUI);
+        }
+
+        // ---------- Número de rastreio (embarque) ao registrar uma baixa ----------
+        // Sem sequence dedicada no banco: o "próximo número" é sempre o maior já
+        // usado + 1, calculado em cima de allSaidasEstoque (já carregado/vivo). Pra
+        // uma equipe pequena isso é suficiente; o pior caso (duas pessoas clicando
+        // "novo rastreio" no mesmíssimo segundo) só geraria dois embarques com o
+        // mesmo número, que dá pra corrigir editando a baixa depois.
+        let rastreioModoAtual = 'novo';
+
+        function proximoRastreioNumero() {
+            return Math.max(0, ...allSaidasEstoque.map(s => s.rastreioNumero || 0)) + 1;
+        }
+
+        function setRastreioMode(mode) {
+            rastreioModoAtual = mode;
+            const btnNovo = document.getElementById('rastreioBtnNovo');
+            const btnExistente = document.getElementById('rastreioBtnExistente');
+            const novo = mode === 'novo';
+            btnNovo.classList.toggle('bg-brand-600', novo);
+            btnNovo.classList.toggle('text-white', novo);
+            btnNovo.classList.toggle('bg-slate-100', !novo);
+            btnNovo.classList.toggle('text-slate-600', !novo);
+            btnExistente.classList.toggle('bg-brand-600', !novo);
+            btnExistente.classList.toggle('text-white', !novo);
+            btnExistente.classList.toggle('bg-slate-100', novo);
+            btnExistente.classList.toggle('text-slate-600', novo);
+
+            document.getElementById('rastreioNovoInfo').classList.toggle('hidden', !novo);
+            document.getElementById('rastreioExistenteSelect').classList.toggle('hidden', novo);
+
+            if (novo) {
+                document.getElementById('rastreioProximoNumero').innerText = `#${proximoRastreioNumero()}`;
+            } else {
+                populateRastreioExistenteSelect();
+            }
+        }
+
+        // Lista os rastreios já usados (mais recente primeiro), com destino e total
+        // de caixas de cada um — pra dar contexto suficiente na hora de escolher em
+        // qual embarque essa nova baixa entra.
+        function populateRastreioExistenteSelect() {
+            const select = document.getElementById('rastreioExistenteSelect');
+            const porRastreio = new Map();
+            allSaidasEstoque.forEach(s => {
+                if (!s.rastreioNumero) return;
+                if (!porRastreio.has(s.rastreioNumero)) porRastreio.set(s.rastreioNumero, []);
+                porRastreio.get(s.rastreioNumero).push(s);
+            });
+            const rastreios = [...porRastreio.entries()].sort((a, b) => b[0] - a[0]);
+            if (rastreios.length === 0) {
+                select.innerHTML = '<option value="">Nenhum rastreio criado ainda</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">Selecione o rastreio...</option>' + rastreios.map(([numero, itens]) => {
+                const destinos = [...new Set(itens.map(i => i.destino).filter(Boolean))].join('/') || 'sem destino';
+                const total = itens.reduce((s, i) => s + i.quantidade, 0);
+                return `<option value="${numero}">#${numero} — ${escapeHtml(destinos)} (${total} cx, ${itens.length} ${itens.length === 1 ? 'item' : 'itens'})</option>`;
+            }).join('');
         }
 
         // Ao escolher o parceiro, restringe o select de produto aos que esse
@@ -3331,12 +3613,85 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 // termina depois — então popula aqui também, garantindo que os selects
                 // não fiquem vazios esperando um segundo carregamento de cadastros.
                 populateEstoqueSelects();
+                populateMsFiltros('baixas');
+                populateMsFiltros('inicio');
                 renderInicioPage();
             } catch (err) {
                 console.error('Erro ao carregar estoque:', err);
                 document.getElementById('estoqueLoading').classList.add('hidden');
                 showMessageModal('Erro', 'Não foi possível carregar o estoque. Verifique a URL/chave do Supabase e a conexão.', 'error');
             }
+        }
+
+        // ---------- Limite mínimo de estoque por produto (Normal x Crítico) ----------
+        async function loadProdutoLimites() {
+            if (!isSupabaseConfigured) return;
+            try {
+                const { data, error } = await db.from('produto_limites').select('produto, limite_minimo');
+                if (error) throw error;
+                produtoLimites = {};
+                (data || []).forEach(row => { produtoLimites[row.produto] = Number(row.limite_minimo) || 0; });
+                renderProdutoLimitesList();
+            } catch (err) {
+                console.error('Erro ao carregar limites de estoque:', err);
+            }
+        }
+
+        // Salva (upsert) o limite mínimo de UM produto — chamado a cada alteração
+        // no campo numérico da lista, em Configurações > Produtos.
+        async function salvarLimiteProduto(produto, valorStr) {
+            if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
+            const valor = Math.max(0, Number(valorStr) || 0);
+            try {
+                const { error } = await db.from('produto_limites').upsert({ produto, limite_minimo: valor });
+                if (error) throw error;
+                produtoLimites[produto] = valor;
+                renderInicioPage();
+            } catch (err) {
+                console.error('Erro ao salvar limite de estoque:', err);
+                showMessageModal('Erro', 'Falha ao salvar o limite. Verifique a conexão com o Supabase.', 'error');
+            }
+        }
+
+        // Lista dentro do modal de Produtos — um campo numérico por produto
+        // cadastrado, salvando sozinho ao sair do campo (sem botão "salvar").
+        function renderProdutoLimitesList() {
+            const wrapper = document.getElementById('listProdutoLimites');
+            if (!wrapper) return;
+            wrapper.innerHTML = '';
+
+            if (cadastros.produtos.length === 0) {
+                const empty = document.createElement('span');
+                empty.className = 'text-[11px] text-slate-400 italic';
+                empty.innerText = 'Cadastre um produto acima primeiro';
+                wrapper.appendChild(empty);
+                return;
+            }
+
+            // Cria os elementos via DOM (em vez de inserir o nome do produto num
+            // atributo onchange dentro de innerHTML) pra não depender de escapar
+            // aspas manualmente — nome de produto é texto livre digitado por quem
+            // usa o app.
+            cadastros.produtos.forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-2 py-1.5';
+
+                const label = document.createElement('span');
+                label.className = 'text-xs font-semibold text-slate-600 truncate';
+                label.innerText = p;
+                row.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '0';
+                input.step = '1';
+                input.value = limiteDoProduto(p);
+                input.className = 'w-20 p-1.5 border rounded-lg text-xs font-bold text-right';
+                input.addEventListener('change', () => salvarLimiteProduto(p, input.value));
+                row.appendChild(input);
+
+                wrapper.appendChild(row);
+            });
         }
 
         function computeEstoqueSaldo() {
@@ -3464,35 +3819,27 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             // ---------- Saldo por produto (cards) ----------
             const saldoDe = produto => todasLinhas.filter(l => l.produto === produto).reduce((s, l) => s + (l.produzido - l.baixado), 0);
-            // Um produto entra "no vermelho" se ALGUM parceiro estiver negativo nele,
-            // mesmo que o saldo somado de todos os parceiros dê positivo — senão um
-            // parceiro problemático fica escondido atrás do saldo bom de outro.
-            const algumParceiroNegativoEm = produto => todasLinhas.some(l => l.produto === produto && (l.produzido - l.baixado) < 0);
+            // Um produto entra "no vermelho" se ALGUM parceiro estiver abaixo do
+            // limite mínimo configurado pra ele (limiteDoProduto, default 0 = só
+            // negativo), mesmo que o saldo somado de todos os parceiros dê
+            // positivo — senão um parceiro problemático fica escondido atrás do
+            // saldo bom de outro.
+            const algumParceiroCriticoEm = produto => todasLinhas.some(l => l.produto === produto && (l.produzido - l.baixado) < limiteDoProduto(produto));
             const maxAbsSaldo = Math.max(1, ...cadastros.produtos.map(p => Math.abs(saldoDe(p))));
             document.getElementById('inicioProdutosCards').innerHTML = cadastros.produtos
-                .map(p => estoqueProdutoCardHtml(p, saldoDe(p), algumParceiroNegativoEm(p), maxAbsSaldo))
+                .map(p => estoqueProdutoCardHtml(p, saldoDe(p), algumParceiroCriticoEm(p), maxAbsSaldo))
                 .join('') || '<span class="text-xs text-slate-400 italic">Nenhum produto cadastrado</span>';
 
-            // ---------- filtros da tabela detalhada ----------
-            const filtroParceiroSelect = document.getElementById('inicioFiltroParceiro');
-            const parceiroAtual = filtroParceiroSelect.value;
-            filtroParceiroSelect.innerHTML = '<option value="">Todos os parceiros</option>' + cadastros.produtores.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-            if (cadastros.produtores.includes(parceiroAtual)) filtroParceiroSelect.value = parceiroAtual;
-
-            const filtroProdutoSelect = document.getElementById('inicioFiltroProduto');
-            const produtoAtual = filtroProdutoSelect.value;
-            filtroProdutoSelect.innerHTML = '<option value="">Todos os produtos</option>' + cadastros.produtos.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-            if (cadastros.produtos.includes(produtoAtual)) filtroProdutoSelect.value = produtoAtual;
-
+            // ---------- filtros da tabela detalhada (multi-seleção — ver msFiltros.inicio) ----------
+            const parceiroSet = msFiltros.inicio.parceiro;
+            const produtoSet = msFiltros.inicio.produto;
             const busca = document.getElementById('inicioBusca').value.trim().toLowerCase();
-            const parceiroFiltro = filtroParceiroSelect.value;
-            const produtoFiltro = filtroProdutoSelect.value;
-            const apenasNegativos = document.getElementById('inicioApenasNegativos').checked;
+            const apenasCriticos = document.getElementById('inicioApenasNegativos').checked;
 
             const linhas = todasLinhas.filter(l => {
-                if (parceiroFiltro && l.produtor !== parceiroFiltro) return false;
-                if (produtoFiltro && l.produto !== produtoFiltro) return false;
-                if (apenasNegativos && (l.produzido - l.baixado) >= 0) return false;
+                if (parceiroSet.size > 0 && !parceiroSet.has(l.produtor)) return false;
+                if (produtoSet.size > 0 && !produtoSet.has(l.produto)) return false;
+                if (apenasCriticos && (l.produzido - l.baixado) >= limiteDoProduto(l.produto)) return false;
                 if (busca && !`${l.produtor} ${l.produto}`.toLowerCase().includes(busca)) return false;
                 return true;
             });
@@ -3523,8 +3870,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     const linhasHtml = itens.map(l => {
                         const saldo = l.produzido - l.baixado;
                         totalProduzido += l.produzido; totalBaixado += l.baixado; totalSaldo += saldo; subtotalSaldo += saldo;
-                        const saldoClass = saldo < 0 ? 'text-red-600 font-black' : 'text-slate-700 font-black';
-                        const saldoIcon = saldo < 0 ? '<i data-lucide="triangle-alert" class="w-3 h-3 inline -mt-0.5 mr-1"></i>' : '';
+                        const critico = saldo < limiteDoProduto(l.produto);
+                        const saldoClass = critico ? 'text-red-600 font-black' : 'text-slate-700 font-black';
+                        const saldoIcon = critico ? '<i data-lucide="triangle-alert" class="w-3 h-3 inline -mt-0.5 mr-1"></i>' : '';
 
                         // Mostra desde quando tem caixa parada em estoque pra esse
                         // parceiro/produto — ajuda a notar estoque velho acumulado.
@@ -3533,7 +3881,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                             ? `<div class="text-[10px] text-slate-400 font-medium mt-0.5">${datasComSaldo.length > 1 ? `desde ${isoDateToBR(datasComSaldo[0].data)} (${datasComSaldo.length} datas)` : `de ${isoDateToBR(datasComSaldo[0].data)}`}</div>`
                             : '';
 
-                        return `<tr class="cursor-pointer hover:bg-brand-50 ${colapsado ? 'hidden' : ''} ${groupShadeClass} ${saldo < 0 ? 'row-negative' : ''}" data-produtor="${escapeHtml(produtor)}" data-produto="${escapeHtml(l.produto)}" title="Clique pra usar essa linha na baixa">
+                        return `<tr class="cursor-pointer hover:bg-brand-50 ${colapsado ? 'hidden' : ''} ${groupShadeClass} ${critico ? 'row-negative' : ''}" data-produtor="${escapeHtml(produtor)}" data-produto="${escapeHtml(l.produto)}" title="Clique pra usar essa linha na baixa">
                             <td>${escapeHtml(l.produto)}${dataMaisAntigaHtml}</td>
                             <td class="num">${l.produzido} cx</td>
                             <td class="num">${l.baixado} cx</td>
@@ -3575,59 +3923,175 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 });
             }
 
-            // ---------- Histórico de baixas (com filtro de período rápido) ----------
-            document.querySelectorAll('#estoqueHistoricoFiltros button').forEach(btn => {
-                const ativo = btn.dataset.periodo === estoqueHistoricoPeriodo;
-                btn.classList.toggle('bg-brand-600', ativo);
-                btn.classList.toggle('text-white', ativo);
-                btn.classList.toggle('bg-slate-100', !ativo);
-                btn.classList.toggle('text-slate-600', !ativo);
-            });
-            let corteHistoricoISO = null;
-            if (estoqueHistoricoPeriodo !== 'tudo') {
-                const dias = estoqueHistoricoPeriodo === 'hoje' ? 0 : estoqueHistoricoPeriodo === '7dias' ? 6 : 29;
-                const corte = new Date(); corte.setDate(corte.getDate() - dias);
-                corteHistoricoISO = dateToInputValue(corte);
-            }
-            const saidasFiltradas = allSaidasEstoque.filter(s => !corteHistoricoISO || s.data >= corteHistoricoISO);
+            // O histórico de baixas mora numa página própria (Baixas) — ver
+            // renderBaixasHistorico(), chamada aqui embaixo pra manter os dois
+            // sempre em sincronia com as mesmas fontes de dados.
+            renderBaixasHistorico();
+            // Chamado aqui também (não só dentro de renderBaixasHistorico) pra não
+            // depender de um caminho interno dela sempre converter os ícones dessa
+            // página inteira — um retorno antecipado esquecido lá já deixou todo
+            // ícone recém-renderizado aqui sumir de uma vez.
+            lucide.createIcons();
+        }
 
+        // ---------- Histórico de baixas (página "Baixas") ----------
+        // Filtros por parceiro/destino/produto/data + agrupamento por destino ou
+        // por rastreio (número de embarque) — funciona como um checklist de
+        // embarque completo, não só uma lista cronológica.
+        function renderBaixasHistorico() {
             const historicoEl = document.getElementById('estoqueHistorico');
+            if (!historicoEl) return;
+
+            const parceiroSet = msFiltros.baixas.parceiro;
+            const destinoSet = msFiltros.baixas.destino;
+            const produtoSet = msFiltros.baixas.produto;
+            const dataInicio = document.getElementById('baixasDataInicio')?.value || '';
+            const dataFim = document.getElementById('baixasDataFim')?.value || '';
+            const agrupamento = document.getElementById('estoqueHistoricoAgrupamento')?.value || '';
+
+            const saidasFiltradas = allSaidasEstoque.filter(s => {
+                if (parceiroSet.size > 0 && !parceiroSet.has(s.produtor)) return false;
+                if (destinoSet.size > 0 && !destinoSet.has(s.destino)) return false;
+                if (produtoSet.size > 0 && !produtoSet.has(s.produto)) return false;
+                if (dataInicio && s.data < dataInicio) return false;
+                if (dataFim && s.data > dataFim) return false;
+                return true;
+            });
+
             if (saidasFiltradas.length === 0) {
-                historicoEl.innerHTML = '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhuma baixa registrada nesse período</span></div>';
-            } else {
-                historicoEl.innerHTML = saidasFiltradas.map(s => `
-                    <div class="summary-row items-start gap-3">
-                        <div class="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0 mt-0.5">
-                            <i data-lucide="minus-circle" class="w-3.5 h-3.5"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-xs font-bold text-slate-700 flex flex-wrap items-center gap-1.5">
-                                <span>${escapeHtml(s.produto)}</span>
-                                <span class="text-slate-400 font-semibold">— ${s.quantidade} cx</span>
-                                ${s.destino ? `<span class="stat-pill bg-brand-50 text-brand-700">${escapeHtml(s.destino)}</span>` : ''}
-                            </p>
-                            <p class="text-[10px] text-slate-400 font-medium mt-0.5">${s.produtor ? escapeHtml(s.produtor) + ' · ' : ''}${isoDateToBR(s.data)}${s.loteData ? ` · lote ${isoDateToBR(s.loteData)}` : ''}${s.observacao ? ' · ' + escapeHtml(s.observacao) : ''}</p>
-                        </div>
-                        <div class="flex items-center gap-1 shrink-0">
-                            <button type="button" onclick="openEditSaidaModal('${s.id}')" class="cadastro-badge-icon-btn" title="Editar"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-                            <button type="button" onclick="excluirSaidaEstoque('${s.id}')" class="cadastro-badge-icon-btn cadastro-badge-icon-btn-danger" title="Excluir"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-                        </div>
+                historicoEl.innerHTML = '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhuma baixa encontrada com esses filtros</span></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            // Hora exata do registro (não só a data) — ajuda a rastrear a ordem real
+            // de embarque no dia, não só "saiu hoje".
+            const horaTexto = s => s.createdAt ? new Date(s.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+            // Parceiro/destino/rastreio viram pills na linha principal — pra ler como
+            // frase completa: "5 cx de Filetado [Fazenda Oásis] [Doce Mel] [#12]",
+            // igual um item de checklist de embarque. mostrarDestino/mostrarRastreio
+            // ficam off quando esse já é o eixo do agrupamento (vira o título do
+            // grupo — repetir na linha seria redundante).
+            const itemHtml = (s, mostrarDestino, mostrarRastreio) => `
+                <div class="summary-row items-start gap-3.5">
+                    <div class="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0 mt-0.5">
+                        <i data-lucide="minus-circle" class="w-4 h-4"></i>
                     </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold text-slate-700 flex flex-wrap items-center gap-2">
+                            <span>${escapeHtml(s.produto)}</span>
+                            <span class="text-slate-400 font-semibold">— ${s.quantidade} cx</span>
+                            ${s.produtor ? `<span class="stat-pill bg-slate-100 text-slate-600">${escapeHtml(s.produtor)}</span>` : ''}
+                            ${mostrarDestino ? (s.destino ? `<span class="stat-pill bg-brand-50 text-brand-700">${escapeHtml(s.destino)}</span>` : '<span class="stat-pill bg-amber-50 text-amber-700">Sem destino</span>') : ''}
+                            ${mostrarRastreio && s.rastreioNumero ? `<span class="stat-pill bg-indigo-50 text-indigo-700">#${s.rastreioNumero}</span>` : ''}
+                        </p>
+                        <p class="text-xs text-slate-400 font-medium mt-1">${isoDateToBR(s.data)}${horaTexto(s) ? ` · ${horaTexto(s)}` : ''}${s.loteData ? ` · lote ${isoDateToBR(s.loteData)}` : ''}${s.observacao ? ' · ' + escapeHtml(s.observacao) : ''}</p>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" onclick="openEditSaidaModal('${s.id}')" class="cadastro-badge-icon-btn !w-7 !h-7" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                        <button type="button" onclick="excluirSaidaEstoque('${s.id}')" class="cadastro-badge-icon-btn cadastro-badge-icon-btn-danger !w-7 !h-7" title="Excluir"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            `;
+
+            if (!agrupamento) {
+                historicoEl.innerHTML = saidasFiltradas.map(s => itemHtml(s, true, true)).join('');
+            } else if (agrupamento === 'destino') {
+                // Um grupo por destino — vira um checklist de embarque (tudo que
+                // saiu pra cada lugar, junto, com o total de caixas). "Sem destino"
+                // sempre por último, pra chamar atenção pras baixas que ainda
+                // faltam ter o destino preenchido.
+                const porDestino = new Map();
+                saidasFiltradas.forEach(s => {
+                    const key = s.destino || '';
+                    if (!porDestino.has(key)) porDestino.set(key, []);
+                    porDestino.get(key).push(s);
+                });
+                const totalDoGrupo = itens => itens.reduce((soma, i) => soma + i.quantidade, 0);
+                const grupos = [...porDestino.entries()].sort((a, b) => {
+                    if (a[0] === '') return 1;
+                    if (b[0] === '') return -1;
+                    return totalDoGrupo(b[1]) - totalDoGrupo(a[1]);
+                });
+
+                historicoEl.innerHTML = grupos.map(([destino, itens]) => `
+                    <div class="px-4 pt-4 pb-2 bg-slate-50 flex items-center justify-between gap-2">
+                        <span class="text-xs font-black uppercase tracking-widest ${destino ? 'text-slate-400' : 'text-amber-600'}">${destino ? escapeHtml(destino) : 'Sem destino definido'}</span>
+                        <span class="text-xs font-bold text-slate-400">${totalDoGrupo(itens)} cx no total</span>
+                    </div>
+                    ${itens.map(s => itemHtml(s, false, true)).join('')}
                 `).join('');
+            } else {
+                // Agrupar por rastreio (número de embarque) — junta baixas de
+                // produtos/parceiros diferentes que saíram juntas no mesmo
+                // embarque. "Sem rastreio" sempre por último.
+                const porRastreio = new Map();
+                saidasFiltradas.forEach(s => {
+                    const key = s.rastreioNumero != null ? String(s.rastreioNumero) : '';
+                    if (!porRastreio.has(key)) porRastreio.set(key, []);
+                    porRastreio.get(key).push(s);
+                });
+                const totalDoGrupo = itens => itens.reduce((soma, i) => soma + i.quantidade, 0);
+                const grupos = [...porRastreio.entries()].sort((a, b) => {
+                    if (a[0] === '') return 1;
+                    if (b[0] === '') return -1;
+                    return Number(b[0]) - Number(a[0]);
+                });
+
+                historicoEl.innerHTML = grupos.map(([chave, itens]) => {
+                    const destinos = [...new Set(itens.map(i => i.destino).filter(Boolean))];
+                    return `
+                        <div class="px-4 pt-4 pb-2 bg-slate-50">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-black uppercase tracking-widest ${chave ? 'text-indigo-600' : 'text-amber-600'}">${chave ? `Rastreio #${chave}` : 'Sem rastreio'}</span>
+                                <span class="text-xs font-bold text-slate-400">${totalDoGrupo(itens)} cx no total</span>
+                            </div>
+                            ${destinos.length ? `<span class="text-[11px] text-slate-400 font-semibold">→ ${destinos.map(d => escapeHtml(d)).join(', ')}</span>` : ''}
+                        </div>
+                        ${itens.map(s => itemHtml(s, true, false)).join('')}
+                    `;
+                }).join('');
             }
 
             renderBaixaEstoquePreview();
             lucide.createIcons();
         }
 
+        function limparFiltrosBaixas() {
+            document.getElementById('baixasDataInicio').value = '';
+            document.getElementById('baixasDataFim').value = '';
+            document.getElementById('estoqueHistoricoAgrupamento').value = '';
+            limparMsFiltros('baixas');
+        }
+
+        // Botões de atalho preenchem De/Até (igual o mesmo padrão do Relatórios)
+        // em vez de guardar um período à parte — assim De/Até continuam a fonte
+        // única de verdade do filtro de data, editáveis também na mão.
+        function setEstoqueHistoricoQuickFilter(kind) {
+            const hoje = new Date();
+            const inicioInput = document.getElementById('baixasDataInicio');
+            const fimInput = document.getElementById('baixasDataFim');
+            if (kind === 'tudo') {
+                inicioInput.value = '';
+                fimInput.value = '';
+            } else if (kind === 'hoje') {
+                inicioInput.value = dateToInputValue(hoje);
+                fimInput.value = dateToInputValue(hoje);
+            } else if (kind === '7dias') {
+                const inicio = new Date(hoje); inicio.setDate(inicio.getDate() - 6);
+                inicioInput.value = dateToInputValue(inicio);
+                fimInput.value = dateToInputValue(hoje);
+            } else if (kind === '30dias') {
+                const inicio = new Date(hoje); inicio.setDate(inicio.getDate() - 29);
+                inicioInput.value = dateToInputValue(inicio);
+                fimInput.value = dateToInputValue(hoje);
+            }
+            renderBaixasHistorico();
+        }
+
         function toggleEstoqueGrupo(produtor) {
             if (estoqueParceirosColapsados.has(produtor)) estoqueParceirosColapsados.delete(produtor);
             else estoqueParceirosColapsados.add(produtor);
-            renderInicioPage();
-        }
-
-        function setEstoqueHistoricoQuickFilter(periodo) {
-            estoqueHistoricoPeriodo = periodo;
             renderInicioPage();
         }
 
@@ -3756,7 +4220,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const abrir = forceOpen !== undefined ? forceOpen : modal.classList.contains('hidden');
             modal.classList.toggle('hidden', !abrir);
             modal.classList.toggle('flex', abrir);
-            if (abrir) lockBodyScroll(); else unlockBodyScroll();
+            if (abrir) { lockBodyScroll(); setRastreioMode('novo'); } else unlockBodyScroll();
             lucide.createIcons();
         }
 
@@ -3785,6 +4249,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             if (!quantidade || quantidade <= 0) return showMessageModal('Atenção', 'Informe a quantidade de caixas.', 'error');
             if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
 
+            let rastreioNumero;
+            if (rastreioModoAtual === 'existente') {
+                const selecionado = document.getElementById('rastreioExistenteSelect').value;
+                if (!selecionado) return showMessageModal('Atenção', 'Selecione em qual rastreio essa baixa entra, ou troque pra "Novo rastreio".', 'error');
+                rastreioNumero = Number(selecionado);
+            } else {
+                rastreioNumero = proximoRastreioNumero();
+            }
+
             const datasComSaldo = computeEstoqueDetalhePorData(produtor, produto).filter(d => d.restante > 0);
             if (datasComSaldo.length > 1 && !baixaEstoqueLoteSelecionado) {
                 return showMessageModal('Atenção', `${produtor} tem mais de um lote de "${produto}" em aberto. Selecione de qual lote (data) sai a baixa.`, 'error');
@@ -3804,7 +4277,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             try {
                 const { data: row, error } = await db.from('estoque_saidas').insert({
-                    produtor, produto, destino: destino || null, quantidade, data, lote_data: loteData || null, observacao: observacao || null
+                    produtor, produto, destino: destino || null, quantidade, data, lote_data: loteData || null, observacao: observacao || null, rastreio_numero: rastreioNumero
                 }).select().single();
                 if (error) throw error;
 
@@ -3872,6 +4345,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             document.getElementById('editSaidaQuantidade').value = saida.quantidade;
             document.getElementById('editSaidaData').value = saida.data;
             document.getElementById('editSaidaObservacao').value = saida.observacao;
+            document.getElementById('editSaidaRastreio').value = saida.rastreioNumero || '';
 
             document.getElementById('editSaidaModal').classList.remove('hidden');
             lockBodyScroll();
@@ -3915,6 +4389,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const quantidade = Number(document.getElementById('editSaidaQuantidade').value);
             const data = document.getElementById('editSaidaData').value;
             const observacao = document.getElementById('editSaidaObservacao').value.trim();
+            const rastreioValor = document.getElementById('editSaidaRastreio').value;
+            const rastreioNumero = rastreioValor ? Number(rastreioValor) : null;
 
             if (!produtor) return showMessageModal('Atenção', 'Selecione o parceiro.', 'error');
             if (!produto) return showMessageModal('Atenção', 'Selecione o produto.', 'error');
@@ -3924,7 +4400,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             try {
                 const { error } = await db.from('estoque_saidas').update({
-                    produtor, produto, destino: destino || null, quantidade, data, lote_data: loteData, observacao: observacao || null
+                    produtor, produto, destino: destino || null, quantidade, data, lote_data: loteData, observacao: observacao || null, rastreio_numero: rastreioNumero
                 }).eq('id', editingSaidaId);
                 if (error) throw error;
 
@@ -3935,6 +4411,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 saida.quantidade = quantidade;
                 saida.data = data;
                 saida.observacao = observacao;
+                saida.rastreioNumero = rastreioNumero;
                 hideEditSaidaModal();
                 renderInicioPage();
             } catch (err) {
