@@ -960,9 +960,16 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                         <button type="button" id="rastreioBtnNovo" onclick="setRastreioMode('novo')" class="px-3 py-2 rounded-lg text-[11px] font-bold uppercase">Novo rastreio</button>
                         <button type="button" id="rastreioBtnExistente" onclick="setRastreioMode('existente')" class="px-3 py-2 rounded-lg text-[11px] font-bold uppercase">Agrupar em existente</button>
                     </div>
-                    <p id="rastreioNovoInfo" class="text-[11px] text-slate-500 font-semibold">Vai criar o rastreio <span class="text-brand-700 font-black" id="rastreioProximoNumero">#1</span></p>
-                    <select id="rastreioExistenteSelect" class="hidden w-full p-2 border font-semibold text-xs">
+                    <div id="rastreioNovoFields" class="flex items-center gap-2">
+                        <span class="text-brand-700 font-black text-sm shrink-0">#</span>
+                        <input type="number" min="1" step="1" id="rastreioNumeroInput" placeholder="Nº" class="w-20 p-2 border font-black text-sm shrink-0">
+                        <span class="text-[11px] text-slate-400 font-semibold shrink-0">(sugerido — pode trocar)</span>
+                    </div>
+                    <select id="rastreioExistenteSelect" onchange="onRastreioExistenteChange()" class="hidden w-full p-2 border font-semibold text-xs">
                         <option value="">Selecione o rastreio...</option>
+                    </select>
+                    <select id="rastreioIdentificacaoInput" class="w-full p-2 border font-semibold text-xs">
+                        <option value="">Sem identificação (opcional)</option>
                     </select>
                 </div>
 
@@ -1033,6 +1040,12 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 <div>
                     <label class="section-label"><i data-lucide="hash" class="w-3 h-3"></i> Número de rastreio — opcional</label>
                     <input type="number" id="editSaidaRastreio" min="1" step="1" placeholder="Ex: 12" class="w-full p-2.5 border font-semibold">
+                </div>
+                <div>
+                    <label class="section-label">Identificação do rastreio — opcional</label>
+                    <select id="editSaidaIdentificacao" class="w-full p-2.5 border font-semibold">
+                        <option value="">Sem identificação</option>
+                    </select>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 pt-2">
@@ -1168,6 +1181,19 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     </div>
                     <div id="fecharAlocLinhas" class="space-y-2"></div>
                 </div>
+                <div class="rounded-lg border border-slate-200 p-2.5 space-y-2">
+                    <button type="button" onclick="toggleFecharAlocPerda()" id="fecharAlocPerdaToggle" class="w-full flex items-center justify-between text-xs font-bold text-slate-500 hover:text-slate-700">
+                        <span><i data-lucide="trash-2" class="w-3.5 h-3.5 inline-block align-[-3px] mr-1"></i> Teve caixa perdida / descartada?</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <div id="fecharAlocPerdaFields" class="hidden space-y-2">
+                        <p class="text-[11px] text-slate-400 font-medium">Caixas que não viraram produto porque o lote não prestou (ou outro motivo) — abatem do "não processado" sem contar como produto nem entrar no estoque.</p>
+                        <div class="flex gap-2">
+                            <input type="number" min="1" step="1" inputmode="numeric" id="fecharAlocPerdaQtd" placeholder="Qtd" oninput="atualizarFecharAlocContador()" class="w-20 p-2 border font-black text-sm text-center shrink-0">
+                            <input type="text" id="fecharAlocPerdaMotivo" placeholder="Motivo (opcional) — ex: lote não prestou" class="flex-1 min-w-0 p-2 border font-semibold text-sm">
+                        </div>
+                    </div>
+                </div>
                 <div id="fecharAlocContador" class="rounded-xl border p-2.5 text-center text-xs font-black"></div>
             </div>
 
@@ -1231,6 +1257,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <div class="min-w-0">
                         <p class="text-sm font-black text-slate-800 leading-tight">Destinos de Estoque</p>
                         <p class="text-[11px] text-slate-500 font-medium mt-0.5">Pra onde vai a baixa — cliente, loja, transferência...</p>
+                    </div>
+                </button>
+                <button type="button" onclick="hideCadastroModal(); openIdentificacoesModal();" class="text-left rounded-2xl border border-slate-200 bg-white hover:border-brand-200 hover:bg-brand-50/50 transition-colors p-4 flex items-start gap-3">
+                    <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-50 border border-brand-100 shrink-0">
+                        <i data-lucide="tag" class="w-4 h-4 text-brand-600"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-black text-slate-800 leading-tight">Identificações de Rastreio</p>
+                        <p class="text-[11px] text-slate-500 font-medium mt-0.5">Ex: Pallet 1, Pallet 2 — aparece na lista suspensa ao dar baixa</p>
                     </div>
                 </button>
             </div>
@@ -1345,6 +1380,31 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         </div>
     </div>
 
+    <!-- Submenu: Identificações de Rastreio -->
+    <div id="identificacoesModal" class="fixed inset-0 bg-black/60 z-[65] hidden flex justify-center items-center backdrop-blur-sm transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto hide-scrollbar">
+            <div class="form-card-header !rounded-t-2xl !rounded-b-none sticky top-0 z-10">
+                <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-50 border border-brand-100 shrink-0">
+                    <i data-lucide="tag" class="w-5 h-5 text-brand-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-base font-black text-slate-800 leading-tight">Identificações de Rastreio</h2>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Adicionado aqui, já vai direto para o banco de dados</p>
+                </div>
+                <button type="button" onclick="hideIdentificacoesModal()" class="text-slate-400 hover:text-slate-700 shrink-0">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-3">
+                <div class="flex gap-2">
+                    <input type="text" id="newIdentificacao" placeholder="Ex: Pallet 1, Pallet 2..." onkeydown="if(event.key==='Enter'){event.preventDefault();addCadastroItem('identificacoes');}" class="flex-1 p-2.5 border font-semibold">
+                    <button type="button" onclick="addCadastroItem('identificacoes')" class="px-4 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-xs uppercase shrink-0">Add</button>
+                </div>
+                <div id="listIdentificacoes" class="flex flex-wrap gap-1.5"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL DE EDIÇÃO (substitui window.prompt) -->
     <div id="promptModal" class="fixed inset-0 bg-black/60 z-[90] hidden flex justify-center items-center backdrop-blur-sm transition-opacity duration-300 p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 max-w-sm transform transition-all scale-100">
@@ -1413,6 +1473,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                         <p>Filetado, Brócolis 300g, Processado etc. Aparece ao fechar uma retirada e ao dar baixa. Aqui também tem o <b>Limite mínimo</b> de cada produto: se o saldo em estoque ficar abaixo desse número, o produto vira <b>Crítico</b> (vermelho) nos cards do Início. Deixe <code>0</code> pra ele só ficar crítico quando o saldo for negativo.</p>
                         <h4>Destinos de Estoque</h4>
                         <p>Pra onde vai a baixa — cliente, loja, transferência. Aparece no campo <b>Destino</b> ao dar baixa (é opcional).</p>
+                        <h4>Identificações de Rastreio</h4>
+                        <p>Etiquetas pra identificar fisicamente um embarque (ex: "Pallet 1", "Pallet 2"). Aparece no campo <b>Identificação</b> ao dar baixa (é opcional). Já vem com "Pallet 1" e "Pallet 2" cadastrados.</p>
                     </div>
                 </details>
 
@@ -1431,19 +1493,22 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                         <h4>A faixa de status do card</h4>
                         <ul>
                             <li><b>entregues</b> — total de caixas cruas que o parceiro trouxe.</li>
-                            <li><b>em proc.</b> — caixas que um colaborador pegou e ainda não fechou.</li>
+                            <li><b>em proc.</b> — caixas que um colaborador pegou e ainda não fechou. Assim que ele pega, essas caixas já saem de "não processado".</li>
                             <li><b>processado</b> — caixas de produto já lançadas (a soma dos lotes).</li>
-                            <li><b>não proc.</b> — o que ainda falta processar (entregues − processado). Fica vermelho quando é maior que zero.</li>
+                            <li><b>perdido</b> — caixas marcadas como perdidas/descartadas ao fechar uma retirada (só aparece quando existe alguma). Não conta como produto nem entra no estoque.</li>
+                            <li><b>não proc.</b> — o que ainda falta processar e ainda nem foi pego por ninguém (entregues − processado − em proc. − perdido). Fica vermelho quando é maior que zero.</li>
                         </ul>
                         <h4>2 · Registrar quem pegou caixas</h4>
                         <p>No bloco <b>Registrar quem pegou caixas</b>: escolha o <b>Colaborador</b>, digite a <b>quantidade de caixas</b> que ele pegou e clique no <b>+</b>. Aparece uma linha em "Em processamento" com o nome dele.</p>
-                        <p>Pegar as caixas <b>não</b> abaixa o "não processado" ainda — só quando você fechar a retirada.</p>
+                        <p>Pegar as caixas já abaixa o "não processado" (elas passam a contar como "em proc.") — só quando você fechar a retirada é que elas viram "processado".</p>
                         <h4>3 · Fechar a retirada / dar baixa</h4>
                         <p>Na linha do colaborador, clique em <b>Fechar</b>. No modal:</p>
                         <ul>
                             <li>Escolha um <b>produto</b> e a <b>quantidade de caixas</b> que virou aquele produto.</li>
                             <li>Clique em <b>+ Produto</b> (ou aperte Enter) pra adicionar mais linhas.</li>
-                            <li>O <b>contador</b> mostra quanto você já informou versus o que foi pego. Não precisa bater exato — se filetar rendeu menos, informe o real; a diferença continua como "não processado".</li>
+                            <li>Se alguma caixa não deu pra processar (lote não prestou, etc.), abra <b>"Teve caixa perdida / descartada?"</b> e informe a quantidade (e o motivo, opcional). Ela abate do "não processado" igual uma caixa processada, mas sem virar produto nem entrar no estoque.</li>
+                            <li>O <b>contador</b> mostra quanto você já informou (produto + perda) versus o que foi pego. Não precisa bater exato — o que faltar continua como "não processado".</li>
+                            <li>Confira o <b>Horário que finalizou</b> (vem preenchido com agora, mas dá pra corrigir).</li>
                             <li>Clique em <b>Dar baixa</b>. Os produtos entram no estoque e o "processado" do card aumenta.</li>
                         </ul>
                         <p>A <b>lixeira</b> ao lado de "Fechar" cancela a retirada (as caixas voltam a ficar livres) — use se registrou errado.</p>
@@ -1489,7 +1554,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                             <li><b>Parceiros</b> — pode marcar vários (múltipla seleção). Cada um vira uma baixa própria, com sua própria quantidade.</li>
                             <li><b>Qtd</b> — uma por parceiro marcado. O app mostra um aviso se passar do saldo disponível daquele parceiro.</li>
                             <li><b>Lote (colheita)</b> — se aquele parceiro/produto tem mais de uma colheita em aberto, escolha de qual sai. Com só uma, o app já assume.</li>
-                            <li><b>Número de rastreio</b> — identifica um embarque. <b>Novo rastreio</b> cria o próximo número; <b>Agrupar em existente</b> junta essa baixa a um embarque já aberto (útil quando vários produtos/parceiros saem juntos pro mesmo destino).</li>
+                            <li><b>Número de rastreio</b> — identifica um embarque. <b>Novo rastreio</b> sugere o próximo número livre, mas dá pra digitar outro na mão; <b>Agrupar em existente</b> junta essa baixa a um embarque já aberto (útil quando vários produtos/parceiros saem juntos pro mesmo destino).</li>
+                            <li><b>Identificação</b> — lista suspensa (cadastrada em Configurações &gt; Identificações de Rastreio, ex: "Pallet 1", "Pallet 2") pra identificar fisicamente o embarque, além do número. Ao agrupar num rastreio existente, o app já seleciona a identificação que esse rastreio já tinha.</li>
                             <li><b>Data</b> e <b>Observação</b> — quando saiu e uma nota livre (opcional).</li>
                         </ul>
                         <h4>Histórico</h4>
@@ -1665,7 +1731,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             unlockBodyScroll();
         }
 
-        let cadastros = { colaboradores: [], produtores: [], produtos: [], destinos: [] };
+        let cadastros = { colaboradores: [], produtores: [], produtos: [], destinos: [], identificacoes: [] };
         // Limite mínimo de estoque por produto (produto -> número de caixas) —
         // abaixo dele o produto vira "Crítico" nos cards do Início e nas linhas
         // da tabela detalhada. Sem entrada pra um produto = limite 0 (mesmo
@@ -1805,7 +1871,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 const { data, error } = await db.from('cadastros').select('tipo, valor').order('created_at', { ascending: true });
                 if (error) throw error;
 
-                cadastros = { colaboradores: [], produtores: [], produtos: [], destinos: [] };
+                cadastros = { colaboradores: [], produtores: [], produtos: [], destinos: [], identificacoes: [] };
                 (data || []).forEach(row => {
                     if (cadastros[row.tipo]) cadastros[row.tipo].push(row.valor);
                 });
@@ -1865,6 +1931,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         function hideProdutosModal() { hideCadastroSubmodal('produtosModal'); }
         function openDestinosModal() { openCadastroSubmodal('destinosModal'); }
         function hideDestinosModal() { hideCadastroSubmodal('destinosModal'); }
+        function openIdentificacoesModal() { openCadastroSubmodal('identificacoesModal'); }
+        function hideIdentificacoesModal() { hideCadastroSubmodal('identificacoesModal'); }
 
         function renderCadastroLists() {
             const renderBadges = (containerId, campo, items) => {
@@ -1912,6 +1980,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             renderBadges('listProdutores', 'produtores', cadastros.produtores);
             renderBadges('listProdutos', 'produtos', cadastros.produtos);
             renderBadges('listDestinos', 'destinos', cadastros.destinos);
+            renderBadges('listIdentificacoes', 'identificacoes', cadastros.identificacoes);
             renderProdutoLimitesList();
             lucide.createIcons();
         }
@@ -1979,6 +2048,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             ],
             destinos: [
                 { table: 'estoque_saidas', column: 'destino' }
+            ],
+            identificacoes: [
+                { table: 'estoque_saidas', column: 'identificacao' }
             ]
         };
 
@@ -2031,7 +2103,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         }
 
         async function addCadastroItem(campo) {
-            const inputIdMap = { colaboradores: 'newColaborador', produtores: 'newProdutor', produtos: 'newProduto', destinos: 'newDestino' };
+            const inputIdMap = { colaboradores: 'newColaborador', produtores: 'newProdutor', produtos: 'newProduto', destinos: 'newDestino', identificacoes: 'newIdentificacao' };
             const input = document.getElementById(inputIdMap[campo]);
             const valor = input.value.trim();
             if (!valor) return;
@@ -2115,25 +2187,32 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             renderParceiroCards();
         }
 
-        // Pendente é normalmente calculado (recebidas - processado), mas processar
-        // nem sempre consome 1 caixa crua pra cada 1 caixa de produto lançada (ex:
-        // filetar rende menos caixas de produto do que caixas cruas usadas) — por
-        // isso "pendenteManual", quando preenchido, sobrescreve o cálculo.
-        function calcPendente(recebidas, processadas, pendenteManual) {
-            return pendenteManual != null ? pendenteManual : Math.max(recebidas - processadas, 0);
+        // Pendente é normalmente calculado (recebidas - processado - em
+        // processamento - perdido), mas processar nem sempre consome 1 caixa
+        // crua pra cada 1 caixa de produto lançada (ex: filetar rende menos
+        // caixas de produto do que caixas cruas usadas) — por isso
+        // "pendenteManual", quando preenchido, sobrescreve o cálculo.
+        function calcPendente(recebidas, processadas, pendenteManual, emProcessamento, perdido) {
+            return pendenteManual != null ? pendenteManual : Math.max(recebidas - processadas - (emProcessamento || 0) - (perdido || 0), 0);
         }
 
         function totalsForCard(card) {
             const recebidas = Number(card.caixasRecebidas) || 0;
             const processadas = card.lotes.reduce((sum, l) => sum + Number(l.quantidade || 0), 0);
-            const pendente = calcPendente(recebidas, processadas, card.pendenteManual);
             // Caixas cruas que já estão com um colaborador mas ainda não foram
-            // fechadas em produto. Não abatem o "pendente" (continuam contando
-            // como não processadas) — é só um recorte de "quem está com o quê".
+            // fechadas em produto. Assim que alguém pega pra trabalhar, elas
+            // saem de "não processado" (ninguém tocou ainda) — já contam como
+            // "em processamento" em vez de continuar somando nas duas colunas.
             const emProcessamento = (card.alocacoes || [])
                 .filter(a => a.status === 'aberta')
                 .reduce((sum, a) => sum + Number(a.caixas || 0), 0);
-            return { recebidas, processadas, pendente, emProcessamento };
+            // Caixas que foram pegas mas não viraram produto porque foram
+            // perdidas/descartadas (registrado no fechamento da retirada) — já é
+            // uma decisão tomada, então some pro pendente igual processado, só
+            // que sem contar como produto/estoque.
+            const perdido = (card.alocacoes || []).reduce((sum, a) => sum + Number(a.perdaQuantidade || 0), 0);
+            const pendente = calcPendente(recebidas, processadas, card.pendenteManual, emProcessamento, perdido);
+            return { recebidas, processadas, pendente, emProcessamento, perdido };
         }
 
         async function salvarEntregaCard(cardId) {
@@ -2321,7 +2400,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 caixas: Number(row.caixas) || 0,
                 status: row.status || 'aberta',
                 criadoDate: new Date(row.created_at),
-                fechadaDate: row.fechada_em ? new Date(row.fechada_em) : null
+                fechadaDate: row.fechada_em ? new Date(row.fechada_em) : null,
+                perdaQuantidade: Number(row.perda_quantidade) || 0,
+                perdaMotivo: row.perda_motivo || ''
             };
         }
 
@@ -2398,15 +2479,33 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 + `<span class="text-slate-900 font-black">${escapeHtml(aloc.colaborador)}</span> pegou `
                 + `<span class="text-slate-900 font-black">${aloc.caixas} caixa${aloc.caixas !== 1 ? 's' : ''}</span> `
                 + `de ${escapeHtml(card.produtor)} · ${isoDateToBR(card.dataColheita)}`
-                + `<span class="block mt-1 text-[11px] text-slate-500 font-semibold">Pegou às ${aloc.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · trabalhando ${humanizarDesde(aloc.criadoDate)}</span>`;
+                + `<span class="block mt-1 text-[11px] text-slate-500 font-semibold">Pegou às ${aloc.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · trabalhando <span data-desde="${aloc.criadoDate.toISOString()}">${humanizarDesde(aloc.criadoDate)}</span></span>`;
 
             document.getElementById('fecharAlocHorario').value = dateToDatetimeLocalValue(new Date());
+            document.getElementById('fecharAlocPerdaFields').classList.add('hidden');
+            document.getElementById('fecharAlocPerdaQtd').value = '';
+            document.getElementById('fecharAlocPerdaMotivo').value = '';
             renderFecharAlocLinhas();
             document.getElementById('fecharAlocacaoModal').classList.remove('hidden');
             lockBodyScroll();
             lucide.createIcons();
             // Foca o primeiro produto pra já sair digitando.
             setTimeout(() => { const s = document.querySelector('#fecharAlocLinhas select'); if (s) s.focus(); }, 60);
+        }
+
+        // Painel de perda/descarte fica escondido por padrão (a maioria das
+        // retiradas não tem perda) — abre expondo qtd + motivo, e limpa os dois
+        // campos ao fechar de novo (senão uma perda esquecida marcada e
+        // escondida acabaria sendo salva do mesmo jeito).
+        function toggleFecharAlocPerda() {
+            const fields = document.getElementById('fecharAlocPerdaFields');
+            const abrir = fields.classList.contains('hidden');
+            fields.classList.toggle('hidden', !abrir);
+            if (!abrir) {
+                document.getElementById('fecharAlocPerdaQtd').value = '';
+                document.getElementById('fecharAlocPerdaMotivo').value = '';
+            }
+            atualizarFecharAlocContador();
         }
 
         function hideFecharAlocacaoModal() {
@@ -2480,21 +2579,24 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const card = findCard(fecharAlocState.cardId);
             const aloc = card && card.alocacoes.find(a => a.id === fecharAlocState.alocId);
             if (!aloc) return;
-            const informadas = fecharAlocState.linhas.reduce((s, l) => s + (Number(l.quantidade) || 0), 0);
+            const informadasProduto = fecharAlocState.linhas.reduce((s, l) => s + (Number(l.quantidade) || 0), 0);
+            const perdaQtd = Number(document.getElementById('fecharAlocPerdaQtd').value) || 0;
+            const informadas = informadasProduto + perdaQtd;
             const dif = informadas - aloc.caixas;
+            const perdaTexto = perdaQtd > 0 ? ` (${perdaQtd} perdida${perdaQtd !== 1 ? 's' : ''})` : '';
             const el = document.getElementById('fecharAlocContador');
             if (informadas === 0) {
                 el.className = 'rounded-xl border p-2.5 text-center text-xs font-black border-slate-200 bg-slate-50 text-slate-500';
                 el.textContent = `Informe as caixas de cada produto (pegou ${aloc.caixas})`;
             } else if (dif === 0) {
                 el.className = 'rounded-xl border p-2.5 text-center text-xs font-black border-green-200 bg-green-50 text-green-700';
-                el.textContent = `✓ ${informadas} de ${aloc.caixas} caixas informadas`;
+                el.textContent = `✓ ${informadas} de ${aloc.caixas} caixas informadas${perdaTexto}`;
             } else if (dif > 0) {
                 el.className = 'rounded-xl border p-2.5 text-center text-xs font-black border-amber-200 bg-amber-50 text-amber-700';
-                el.textContent = `${informadas} informadas · ${dif} cx a mais do que foi pego (${aloc.caixas})`;
+                el.textContent = `${informadas} informadas${perdaTexto} · ${dif} cx a mais do que foi pego (${aloc.caixas})`;
             } else {
                 el.className = 'rounded-xl border p-2.5 text-center text-xs font-black border-amber-200 bg-amber-50 text-amber-700';
-                el.textContent = `${informadas} de ${aloc.caixas} · faltam ${-dif} cx (ficam como não processado)`;
+                el.textContent = `${informadas} de ${aloc.caixas}${perdaTexto} · faltam ${-dif} cx (ficam como não processado)`;
             }
         }
 
@@ -2509,7 +2611,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 .map(l => ({ produto: (l.produto || '').trim(), quantidade: Number(l.quantidade) }))
                 .filter(l => l.produto && l.quantidade > 0);
 
-            if (linhas.length === 0) return showMessageModal('Atenção', 'Informe pelo menos um produto e a quantidade de caixas.', 'error');
+            const perdaQuantidade = Number(document.getElementById('fecharAlocPerdaQtd').value) || 0;
+            const perdaMotivo = document.getElementById('fecharAlocPerdaMotivo').value.trim();
+
+            if (linhas.length === 0 && perdaQuantidade === 0) return showMessageModal('Atenção', 'Informe pelo menos um produto e a quantidade de caixas (ou marque a perda).', 'error');
             if (fecharAlocState.linhas.some(l => (l.produto && !(Number(l.quantidade) > 0)) || (!l.produto && Number(l.quantidade) > 0))) {
                 return showMessageModal('Atenção', 'Tem linha com produto sem quantidade (ou o contrário). Preencha os dois ou remova a linha.', 'error');
             }
@@ -2522,38 +2627,47 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 return showMessageModal('Atenção', `O horário de finalização não pode ser antes de quando ${aloc.colaborador} pegou as caixas (${aloc.criadoDate.toLocaleString('pt-BR')}).`, 'error');
             }
 
-            const informadas = linhas.reduce((s, l) => s + l.quantidade, 0);
+            const informadasProduto = linhas.reduce((s, l) => s + l.quantidade, 0);
+            const informadas = informadasProduto + perdaQuantidade;
             if (informadas !== aloc.caixas) {
                 const dif = informadas - aloc.caixas;
                 const msg = dif > 0
-                    ? `Você informou ${informadas} cx de produto, ${dif} a mais do que as ${aloc.caixas} cx que ${aloc.colaborador} pegou. Confirmar mesmo assim?`
-                    : `Você informou ${informadas} cx de produto das ${aloc.caixas} cx que ${aloc.colaborador} pegou. As ${-dif} cx restantes continuam contando como não processado. Confirmar?`;
+                    ? `Você informou ${informadas} cx (produto + perda), ${dif} a mais do que as ${aloc.caixas} cx que ${aloc.colaborador} pegou. Confirmar mesmo assim?`
+                    : `Você informou ${informadas} cx (produto + perda) das ${aloc.caixas} cx que ${aloc.colaborador} pegou. As ${-dif} cx restantes continuam contando como não processado. Confirmar?`;
                 const ok = await showConfirmActionModal('Quantidade não bate', msg);
                 if (!ok) return;
             }
 
             try {
-                const { data: procData, error: procErr } = await db.from('processamentos').insert(
-                    linhas.map(l => ({
-                        entrega_id: card.entregaId,
-                        colaborador: aloc.colaborador,
-                        produto: l.produto,
-                        quantidade: l.quantidade,
-                        alocacao_id: aloc.id
-                    }))
-                ).select();
-                if (procErr) throw procErr;
+                let procData = [];
+                if (linhas.length > 0) {
+                    const { data, error: procErr } = await db.from('processamentos').insert(
+                        linhas.map(l => ({
+                            entrega_id: card.entregaId,
+                            colaborador: aloc.colaborador,
+                            produto: l.produto,
+                            quantidade: l.quantidade,
+                            alocacao_id: aloc.id
+                        }))
+                    ).select();
+                    if (procErr) throw procErr;
+                    procData = data || [];
+                }
 
                 const { error: alocErr } = await db.from('alocacoes').update({
                     status: 'fechada',
-                    fechada_em: fechadaEm.toISOString()
+                    fechada_em: fechadaEm.toISOString(),
+                    perda_quantidade: perdaQuantidade,
+                    perda_motivo: perdaMotivo || null
                 }).eq('id', aloc.id);
                 if (alocErr) throw alocErr;
 
-                (procData || []).forEach(row => {
+                procData.forEach(row => {
                     if (!card.lotes.some(l => l.id === row.id)) card.lotes.push(mapProcessamentoRow(row));
                 });
                 aloc.status = 'fechada';
+                aloc.perdaQuantidade = perdaQuantidade;
+                aloc.perdaMotivo = perdaMotivo;
                 hideFecharAlocacaoModal();
                 renderParceiroCards();
             } catch (err) {
@@ -2960,6 +3074,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <span class="inline-flex items-baseline gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-bold"><b class="text-[13px] font-black text-slate-800">${t.recebidas}</b> entregues</span>
                     ${t.emProcessamento > 0 ? `<span class="inline-flex items-baseline gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-bold"><b class="text-[13px] font-black">${t.emProcessamento}</b> em proc.</span>` : ''}
                     <span class="inline-flex items-baseline gap-1 px-2 py-1 rounded-lg bg-brand-50 text-brand-700 text-[11px] font-bold"><b class="text-[13px] font-black">${t.processadas}</b> processado</span>
+                    ${t.perdido > 0 ? `<span class="inline-flex items-baseline gap-1 px-2 py-1 rounded-lg bg-slate-200 text-slate-600 text-[11px] font-bold" title="Caixas perdidas/descartadas"><b class="text-[13px] font-black">${t.perdido}</b> perdido</span>` : ''}
                     <span class="inline-flex items-baseline gap-1 px-2 py-1 rounded-lg ${t.pendente > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'} text-[11px] font-bold"><b class="text-[13px] font-black">${t.pendente}</b> não proc.${card.pendenteManual != null ? ' *' : ''}</span>
                 </div>`;
 
@@ -2972,7 +3087,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     </span>
                     <span class="flex-1 min-w-0 leading-tight">
                         <span class="block text-xs font-black text-slate-800 truncate">${escapeHtml(a.colaborador)}</span>
-                        <span class="block text-[11px] font-bold text-amber-700">${a.caixas} cx · pegou ${a.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} <span class="text-amber-600/70 font-semibold">(${humanizarDesde(a.criadoDate)})</span></span>
+                        <span class="block text-[11px] font-bold text-amber-700">${a.caixas} cx · pegou ${a.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} <span class="text-amber-600/70 font-semibold">(<span data-desde="${a.criadoDate.toISOString()}">${humanizarDesde(a.criadoDate)}</span>)</span></span>
                     </span>
                     <button type="button" onclick="openFecharAlocacaoModal(${card.cardId}, '${a.id}')" class="px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-[11px] font-black uppercase tracking-wide flex items-center gap-1 shrink-0">
                         <i data-lucide="package-check" class="w-3.5 h-3.5"></i> Fechar
@@ -3034,6 +3149,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const emProcBadge = t.emProcessamento > 0
                 ? `<span class="text-amber-600 font-black">${t.emProcessamento} em proc.</span> · `
                 : '';
+            const perdidoBadge = t.perdido > 0
+                ? `<span class="text-slate-500 font-black" title="Caixas perdidas/descartadas">${t.perdido} perdido</span> · `
+                : '';
             const statusBadge = card.concluido
                 ? `<span class="text-green-600 font-black inline-flex items-center gap-0.5"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Concluído</span>`
                 : `<span class="${pendenteClass}">${t.pendente} não proc.${card.pendenteManual != null ? ' (manual)' : ''}</span>`;
@@ -3052,7 +3170,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                                 <i data-lucide="trash-2" class="w-3 h-3"></i>
                             </button>
                         </span>
-                        <span class="badge-total shrink-0 ml-auto">${t.recebidas} entreg.${card.kgRecebidos != null ? ` (${card.kgRecebidos.toLocaleString('pt-BR')} kg)` : ''} · ${t.processadas} proc. · ${emProcBadge}${statusBadge}</span>
+                        <span class="badge-total shrink-0 ml-auto">${t.recebidas} entreg.${card.kgRecebidos != null ? ` (${card.kgRecebidos.toLocaleString('pt-BR')} kg)` : ''} · ${t.processadas} proc. · ${emProcBadge}${perdidoBadge}${statusBadge}</span>
                     </div>
                     ${bodyHtml}
                 </div>
@@ -3232,7 +3350,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             // saíram dele — em vez de só um número somado — porque é isso que o
             // pessoal precisa ler rápido: qual produto e quanto, não só um total.
             // "Não Processado" continua um número só: são caixas cruas que o parceiro
-            // entregou e a equipe ainda não separou em nenhum produto.
+            // entregou e ninguém pegou pra processar ainda (não inclui o que já
+            // está com um colaborador em "em processamento").
             const produtoBreakdownHtml = card => {
                 if (card.lotes.length === 0) return '<span class="muted">—</span>';
                 const porProduto = new Map();
@@ -3433,6 +3552,24 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             let processadas = 0;
             allProcessamentos.forEach(p => { if (p.entregaId === entregaId) processadas += p.quantidade; });
             return processadas;
+        }
+
+        // Caixas cruas dessa entrega que já estão com algum colaborador (retirada
+        // aberta) mas ainda não foram fechadas em produto — usado pra abater do
+        // "não processado" assim que alguém pega pra trabalhar.
+        function emProcessamentoForEntrega(entregaId) {
+            let emProcessamento = 0;
+            allAlocacoes.forEach(a => { if (a.entregaId === entregaId && a.status === 'aberta') emProcessamento += a.caixas; });
+            return emProcessamento;
+        }
+
+        // Caixas dessa entrega marcadas como perdidas/descartadas no fechamento
+        // de alguma retirada (lote não prestou etc.) — ver comentário de
+        // "perdaQuantidade" em mapAlocacaoRow.
+        function perdidoForEntrega(entregaId) {
+            let perdido = 0;
+            allAlocacoes.forEach(a => { if (a.entregaId === entregaId) perdido += a.perdaQuantidade; });
+            return perdido;
         }
 
         async function loadEntregasEProcessamentos() {
@@ -3825,7 +3962,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const pendentePorEntrega = new Map();
             entregas.forEach(e => {
                 const processadas = statsForEntrega(e.id);
-                const pendente = calcPendente(e.caixasRecebidas, processadas, e.pendenteManual);
+                const emProcessamento = emProcessamentoForEntrega(e.id);
+                const perdido = perdidoForEntrega(e.id);
+                const pendente = calcPendente(e.caixasRecebidas, processadas, e.pendenteManual, emProcessamento, perdido);
                 pendentePorEntrega.set(e.id, pendente);
                 totalRecebidas += e.caixasRecebidas;
                 totalProcessadas += processadas;
@@ -4044,7 +4183,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 loteData: row.lote_data || null,
                 observacao: row.observacao || '',
                 createdAt: row.created_at,
-                rastreioNumero: row.rastreio_numero != null ? Number(row.rastreio_numero) : null
+                rastreioNumero: row.rastreio_numero != null ? Number(row.rastreio_numero) : null,
+                identificacao: row.identificacao || ''
             };
         }
 
@@ -4064,6 +4204,12 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const destinoAtual = destinoSelect.value;
             destinoSelect.innerHTML = '<option value="" selected disabled hidden>Destino (opcional)...</option>' + destinoOptions;
             destinoSelect.value = destinoAtual;
+
+            const identificacaoOptions = cadastros.identificacoes.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+            const identificacaoSelect = document.getElementById('rastreioIdentificacaoInput');
+            const identificacaoAtual = identificacaoSelect.value;
+            identificacaoSelect.innerHTML = '<option value="">Sem identificação (opcional)</option>' + identificacaoOptions;
+            identificacaoSelect.value = identificacaoAtual;
 
             ['baixaEstoqueProduto', 'baixaEstoqueDestino'].forEach(updateEstoqueSelectClearUI);
             refreshBaixaEstoqueParceirosDisponiveis();
@@ -4161,19 +4307,20 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             btnExistente.classList.toggle('bg-slate-100', novo);
             btnExistente.classList.toggle('text-slate-600', novo);
 
-            document.getElementById('rastreioNovoInfo').classList.toggle('hidden', !novo);
+            document.getElementById('rastreioNovoFields').classList.toggle('hidden', !novo);
             document.getElementById('rastreioExistenteSelect').classList.toggle('hidden', novo);
 
             if (novo) {
-                document.getElementById('rastreioProximoNumero').innerText = `#${proximoRastreioNumero()}`;
+                const numeroInput = document.getElementById('rastreioNumeroInput');
+                if (!numeroInput.value) numeroInput.value = proximoRastreioNumero();
             } else {
                 populateRastreioExistenteSelect();
             }
         }
 
-        // Lista os rastreios já usados (mais recente primeiro), com destino e total
-        // de caixas de cada um — pra dar contexto suficiente na hora de escolher em
-        // qual embarque essa nova baixa entra.
+        // Lista os rastreios já usados (mais recente primeiro), com destino,
+        // identificação e total de caixas de cada um — pra dar contexto
+        // suficiente na hora de escolher em qual embarque essa nova baixa entra.
         function populateRastreioExistenteSelect() {
             const select = document.getElementById('rastreioExistenteSelect');
             const porRastreio = new Map();
@@ -4190,8 +4337,20 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             select.innerHTML = '<option value="">Selecione o rastreio...</option>' + rastreios.map(([numero, itens]) => {
                 const destinos = [...new Set(itens.map(i => i.destino).filter(Boolean))].join('/') || 'sem destino';
                 const total = itens.reduce((s, i) => s + i.quantidade, 0);
-                return `<option value="${numero}">#${numero} — ${escapeHtml(destinos)} (${total} cx, ${itens.length} ${itens.length === 1 ? 'item' : 'itens'})</option>`;
+                const identificacao = itens.map(i => i.identificacao).find(Boolean);
+                return `<option value="${numero}">#${numero}${identificacao ? ` (${escapeHtml(identificacao)})` : ''} — ${escapeHtml(destinos)} (${total} cx, ${itens.length} ${itens.length === 1 ? 'item' : 'itens'})</option>`;
             }).join('');
+        }
+
+        // Ao escolher um rastreio existente, reaproveita a identificação que já
+        // estava sendo usada nele (se tiver) — evita a mesma carga acabar com
+        // "Pallet 1" numa baixa e "Palete 1" (ou nada) em outra.
+        function onRastreioExistenteChange() {
+            const numero = Number(document.getElementById('rastreioExistenteSelect').value);
+            const identificacao = numero
+                ? (allSaidasEstoque.find(s => s.rastreioNumero === numero && s.identificacao)?.identificacao || '')
+                : '';
+            document.getElementById('rastreioIdentificacaoInput').value = identificacao;
         }
 
         // Ao escolher o produto, restringe o painel de parceiros aos que
@@ -4511,7 +4670,18 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 const processadasAteData = limiteDate
                     ? allProcessamentos.reduce((sp, p) => sp + (p.entregaId === e.id && p.horaDate <= limiteDate ? p.quantidade : 0), 0)
                     : statsForEntrega(e.id);
-                return s + calcPendente(e.caixasRecebidas, processadasAteData, e.pendenteManual);
+                // Retiradas que já estavam abertas naquela data e ainda não tinham
+                // fechado até ela (ou nunca fecharam) — mesma ideia do "em
+                // processamento" de hoje, só que reconstruída pro corte de data.
+                const emProcessamentoAteData = limiteDate
+                    ? allAlocacoes.reduce((sa, a) => sa + (a.entregaId === e.id && a.criadoDate <= limiteDate && (!a.fechadaDate || a.fechadaDate > limiteDate) ? a.caixas : 0), 0)
+                    : emProcessamentoForEntrega(e.id);
+                // Perda só existe a partir do fechamento da retirada que a
+                // registrou — mesmo corte de data usado pra "processadasAteData".
+                const perdidoAteData = limiteDate
+                    ? allAlocacoes.reduce((sa, a) => sa + (a.entregaId === e.id && a.fechadaDate && a.fechadaDate <= limiteDate ? a.perdaQuantidade : 0), 0)
+                    : perdidoForEntrega(e.id);
+                return s + calcPendente(e.caixasRecebidas, processadasAteData, e.pendenteManual, emProcessamentoAteData, perdidoAteData);
             }, 0);
 
             return { totalEstoque, totalPendente, parceirosAtivos };
@@ -4739,25 +4909,37 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             // Hora exata do registro (não só a data) — ajuda a rastrear a ordem real
             // de embarque no dia, não só "saiu hoje".
             const horaTexto = s => s.createdAt ? new Date(s.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+            // Cada campo (produto/parceiro/destino/rastreio/observação) vira uma
+            // "coluna" com um rotulinho em cima do valor — mas só na PRIMEIRA linha
+            // da lista inteira (ver "primeiraLinha" abaixo); repetir o rótulo em
+            // toda linha empilhava um monte de "Produto/Parceiro/Destino..." igual,
+            // poluindo a lista. Da segunda linha em diante já dá pra reconhecer o
+            // que é o quê pela posição/cor do pill.
+            const campo = (mostrarLabel, label, valorHtml) => mostrarLabel
+                ? `<span class="inline-flex flex-col items-start leading-none gap-0.5">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-slate-400">${label}</span>
+                        ${valorHtml}
+                    </span>`
+                : valorHtml;
             // Parceiro/destino/rastreio viram pills na linha principal — pra ler como
             // frase completa: "5 cx de Filetado [Fazenda Oásis] [Doce Mel] [#12]",
             // igual um item de checklist de embarque. mostrarDestino/mostrarRastreio
             // ficam off quando esse já é o eixo do agrupamento (vira o título do
             // grupo — repetir na linha seria redundante).
-            const itemHtml = (s, mostrarDestino, mostrarRastreio) => `
+            const itemHtml = (s, mostrarDestino, mostrarRastreio, mostrarLabels) => `
                 <div class="summary-row items-start gap-3.5">
                     <div class="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0 mt-0.5">
                         <i data-lucide="minus-circle" class="w-4 h-4"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-bold text-slate-700 flex flex-wrap items-center gap-2">
-                            <span>${escapeHtml(s.produto)}</span>
-                            <span class="text-slate-400 font-semibold">— ${s.quantidade} cx</span>
-                            ${s.produtor ? `<span class="stat-pill bg-slate-100 text-slate-600">${escapeHtml(s.produtor)}</span>` : ''}
-                            ${mostrarDestino ? (s.destino ? `<span class="stat-pill bg-brand-50 text-brand-700">${escapeHtml(s.destino)}</span>` : '<span class="stat-pill bg-amber-50 text-amber-700">Sem destino</span>') : ''}
-                            ${mostrarRastreio && s.rastreioNumero ? `<span class="stat-pill bg-indigo-50 text-indigo-700">#${s.rastreioNumero}</span>` : ''}
+                        <p class="text-sm font-bold text-slate-700 flex flex-wrap items-end gap-3">
+                            ${campo(mostrarLabels, 'Produto', `<span>${escapeHtml(s.produto)} <span class="text-slate-400 font-semibold">— ${s.quantidade} cx</span></span>`)}
+                            ${s.produtor ? campo(mostrarLabels, 'Parceiro', `<span class="stat-pill bg-slate-100 text-slate-600">${escapeHtml(s.produtor)}</span>`) : ''}
+                            ${mostrarDestino ? campo(mostrarLabels, 'Destino', s.destino ? `<span class="stat-pill bg-brand-50 text-brand-700">${escapeHtml(s.destino)}</span>` : '<span class="stat-pill bg-amber-50 text-amber-700">Sem destino</span>') : ''}
+                            ${mostrarRastreio && s.rastreioNumero ? campo(mostrarLabels, 'Rastreio', `<span class="stat-pill bg-indigo-50 text-indigo-700">#${s.rastreioNumero}${s.identificacao ? ` · ${escapeHtml(s.identificacao)}` : ''}</span>`) : ''}
+                            ${s.observacao ? campo(mostrarLabels, 'Obs.', `<span class="stat-pill bg-slate-50 text-slate-500">${escapeHtml(s.observacao)}</span>`) : ''}
                         </p>
-                        <p class="text-xs text-slate-400 font-medium mt-1">${isoDateToBR(s.data)}${horaTexto(s) ? ` · ${horaTexto(s)}` : ''}${s.loteData ? ` · lote ${isoDateToBR(s.loteData)}` : ''}${s.observacao ? ' · ' + escapeHtml(s.observacao) : ''}</p>
+                        <p class="text-xs text-slate-400 font-medium mt-1.5">${isoDateToBR(s.data)}${horaTexto(s) ? ` · ${horaTexto(s)}` : ''}${s.loteData ? ` · lote ${isoDateToBR(s.loteData)}` : ''}</p>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                         <button type="button" onclick="openEditSaidaModal('${s.id}')" class="cadastro-badge-icon-btn !w-7 !h-7" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
@@ -4765,9 +4947,17 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     </div>
                 </div>
             `;
+            // true só na primeira linha renderizada (de toda a lista, mesmo
+            // atravessando grupos) — muda pra false no primeiro uso e nunca mais volta.
+            let primeiraLinha = true;
+            const itemHtmlComLabelUmaVez = (s, mostrarDestino, mostrarRastreio) => {
+                const html = itemHtml(s, mostrarDestino, mostrarRastreio, primeiraLinha);
+                primeiraLinha = false;
+                return html;
+            };
 
             if (!agrupamento) {
-                historicoEl.innerHTML = saidasFiltradas.map(s => itemHtml(s, true, true)).join('');
+                historicoEl.innerHTML = saidasFiltradas.map(s => itemHtmlComLabelUmaVez(s, true, true)).join('');
             } else if (agrupamento === 'destino') {
                 // Um grupo por destino — vira um checklist de embarque (tudo que
                 // saiu pra cada lugar, junto, com o total de caixas). "Sem destino"
@@ -4791,7 +4981,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                         <span class="text-xs font-black uppercase tracking-widest ${destino ? 'text-slate-400' : 'text-amber-600'}">${destino ? escapeHtml(destino) : 'Sem destino definido'}</span>
                         <span class="text-xs font-bold text-slate-400">${totalDoGrupo(itens)} cx no total</span>
                     </div>
-                    ${itens.map(s => itemHtml(s, false, true)).join('')}
+                    ${itens.map(s => itemHtmlComLabelUmaVez(s, false, true)).join('')}
                 `).join('');
             } else {
                 // Agrupar por rastreio (número de embarque) — junta baixas de
@@ -4812,15 +5002,16 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                 historicoEl.innerHTML = grupos.map(([chave, itens]) => {
                     const destinos = [...new Set(itens.map(i => i.destino).filter(Boolean))];
+                    const identificacao = itens.map(i => i.identificacao).find(Boolean);
                     return `
                         <div class="px-4 pt-4 pb-2 bg-slate-50">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="text-xs font-black uppercase tracking-widest ${chave ? 'text-indigo-600' : 'text-amber-600'}">${chave ? `Rastreio #${chave}` : 'Sem rastreio'}</span>
+                                <span class="text-xs font-black uppercase tracking-widest ${chave ? 'text-indigo-600' : 'text-amber-600'}">${chave ? `Rastreio #${chave}${identificacao ? ` — ${escapeHtml(identificacao)}` : ''}` : 'Sem rastreio'}</span>
                                 <span class="text-xs font-bold text-slate-400">${totalDoGrupo(itens)} cx no total</span>
                             </div>
                             ${destinos.length ? `<span class="text-[11px] text-slate-400 font-semibold">→ ${destinos.map(d => escapeHtml(d)).join(', ')}</span>` : ''}
                         </div>
-                        ${itens.map(s => itemHtml(s, true, false)).join('')}
+                        ${itens.map(s => itemHtmlComLabelUmaVez(s, true, false)).join('')}
                     `;
                 }).join('');
             }
@@ -4991,16 +5182,36 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
         function fmtDuracao(ms) {
             if (ms == null || !isFinite(ms) || ms <= 0) return '—';
-            const totalMin = Math.round(ms / 60000);
-            if (totalMin < 1) return '<1min';
+            // Abaixo de 1min mostra segundos de verdade (em vez de um genérico
+            // "<1min") — só vira "Xmin" quando um minuto INTEIRO já passou.
+            const totalSec = Math.floor(ms / 1000);
+            if (totalSec < 60) return totalSec + 's';
+            const totalMin = Math.floor(ms / 60000);
             if (totalMin < 60) return totalMin + 'min';
             const h = Math.floor(totalMin / 60), m = totalMin % 60;
             return m === 0 ? h + 'h' : h + 'h ' + m + 'min';
         }
         function humanizarDesde(date) {
             if (!date) return '';
-            return 'há ' + fmtDuracao(Date.now() - date.getTime());
+            // Math.max(..., 1): o "created_at" vem do relógio do servidor
+            // (Supabase), que pode estar alguns segundos à frente do relógio
+            // local da máquina — logo depois de registrar, isso dava uma
+            // diferença negativa e caía no "—" de fmtDuracao (em vez de "1s",
+            // que é o que faz sentido pra algo que acabou de acontecer).
+            return 'há ' + fmtDuracao(Math.max(Date.now() - date.getTime(), 1));
         }
+
+        // Atualiza os "há Xs/Xmin" de retirada em aberto sem re-renderizar a
+        // página inteira — cada span que usa humanizarDesde carrega o
+        // criadoDate original em data-desde, e esse tick só troca o texto
+        // desses spans a cada segundo (rodando o tempo todo, em qualquer
+        // página, já que são poucos elementos e a busca é barata).
+        function tickHumanizarDesde() {
+            document.querySelectorAll('[data-desde]').forEach(el => {
+                el.textContent = humanizarDesde(new Date(el.dataset.desde));
+            });
+        }
+        setInterval(tickHumanizarDesde, 1000);
         function fmtNum(n, casas) {
             if (n == null || !isFinite(n)) return '—';
             return n.toLocaleString('pt-BR', { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 });
@@ -5204,7 +5415,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                                 <div class="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0"><i data-lucide="user" class="w-3.5 h-3.5"></i></div>
                                 <div class="min-w-0 leading-tight">
                                     <span class="block text-xs font-black text-slate-800 truncate">${escapeHtml(a.colaborador)}</span>
-                                    <span class="block text-[10px] font-bold text-amber-700">${a.caixas} cx · pegou ${a.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · ${humanizarDesde(a.criadoDate)}</span>
+                                    <span class="block text-[10px] font-bold text-amber-700">${a.caixas} cx · pegou ${a.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · <span data-desde="${a.criadoDate.toISOString()}">${humanizarDesde(a.criadoDate)}</span></span>
                                 </div>
                             </div>`).join('')}
                     </div>
@@ -5369,7 +5580,13 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const abrir = forceOpen !== undefined ? forceOpen : modal.classList.contains('hidden');
             modal.classList.toggle('hidden', !abrir);
             modal.classList.toggle('flex', abrir);
-            if (abrir) { lockBodyScroll(); setRastreioMode('novo'); renderBaixaEstoqueQtdRows(); } else unlockBodyScroll();
+            if (abrir) {
+                lockBodyScroll();
+                document.getElementById('rastreioNumeroInput').value = '';
+                document.getElementById('rastreioIdentificacaoInput').value = '';
+                setRastreioMode('novo');
+                renderBaixaEstoqueQtdRows();
+            } else unlockBodyScroll();
             lucide.createIcons();
         }
 
@@ -5436,13 +5653,29 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 if (!selecionado) return showMessageModal('Atenção', 'Selecione em qual rastreio essa baixa entra, ou troque pra "Novo rastreio".', 'error');
                 rastreioNumero = Number(selecionado);
             } else {
-                rastreioNumero = proximoRastreioNumero();
+                const numeroDigitado = Number(document.getElementById('rastreioNumeroInput').value);
+                if (!numeroDigitado || numeroDigitado <= 0) return showMessageModal('Atenção', 'Informe um número de rastreio válido.', 'error');
+                rastreioNumero = numeroDigitado;
+                // Número digitado na mão pode coincidir com um rastreio que já
+                // existe (ex: a pessoa lembrou o número de cabeça) — confirma
+                // antes de simplesmente agrupar nele sem avisar.
+                const existentes = allSaidasEstoque.filter(s => s.rastreioNumero === rastreioNumero);
+                if (existentes.length > 0) {
+                    const total = existentes.reduce((s, i) => s + i.quantidade, 0);
+                    const confirmed = await showConfirmActionModal(
+                        'Rastreio já existe',
+                        `Já existe o rastreio #${rastreioNumero} (${existentes.length} ${existentes.length === 1 ? 'item' : 'itens'}, ${total} cx). Essa baixa vai se juntar a ele. Continuar?`
+                    );
+                    if (!confirmed) return;
+                }
             }
+            const identificacao = document.getElementById('rastreioIdentificacaoInput').value.trim();
 
             try {
                 const rows = itens.map(it => ({
                     produtor: it.produtor, produto, destino: destino || null, quantidade: it.quantidade,
-                    data, lote_data: it.loteData || null, observacao: observacao || null, rastreio_numero: rastreioNumero
+                    data, lote_data: it.loteData || null, observacao: observacao || null, rastreio_numero: rastreioNumero,
+                    identificacao: identificacao || null
                 }));
                 const { data: inserted, error } = await db.from('estoque_saidas').insert(rows).select();
                 if (error) throw error;
@@ -5454,6 +5687,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 baixaEstoqueQtdPorParceiro.clear();
                 baixaEstoqueLotesPorParceiro.clear();
                 document.getElementById('baixaEstoqueObservacao').value = '';
+                document.getElementById('rastreioNumeroInput').value = '';
+                document.getElementById('rastreioIdentificacaoInput').value = '';
                 updateBaixaEstoqueParceirosLabel();
                 renderBaixaEstoqueParceirosPanel();
                 renderBaixaEstoqueQtdRows();
@@ -5512,6 +5747,11 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             destinoSelect.innerHTML = '<option value="">Sem destino específico</option>' + destinoOptions;
             destinoSelect.value = saida.destino || '';
 
+            const identificacaoOptions = cadastros.identificacoes.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+            const identificacaoSelect = document.getElementById('editSaidaIdentificacao');
+            identificacaoSelect.innerHTML = '<option value="">Sem identificação</option>' + identificacaoOptions;
+            identificacaoSelect.value = saida.identificacao || '';
+
             document.getElementById('editSaidaQuantidade').value = saida.quantidade;
             document.getElementById('editSaidaData').value = saida.data;
             document.getElementById('editSaidaObservacao').value = saida.observacao;
@@ -5561,6 +5801,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const observacao = document.getElementById('editSaidaObservacao').value.trim();
             const rastreioValor = document.getElementById('editSaidaRastreio').value;
             const rastreioNumero = rastreioValor ? Number(rastreioValor) : null;
+            const identificacao = document.getElementById('editSaidaIdentificacao').value.trim();
 
             if (!produtor) return showMessageModal('Atenção', 'Selecione o parceiro.', 'error');
             if (!produto) return showMessageModal('Atenção', 'Selecione o produto.', 'error');
@@ -5570,7 +5811,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             try {
                 const { error } = await db.from('estoque_saidas').update({
-                    produtor, produto, destino: destino || null, quantidade, data, lote_data: loteData, observacao: observacao || null, rastreio_numero: rastreioNumero
+                    produtor, produto, destino: destino || null, quantidade, data, lote_data: loteData, observacao: observacao || null, rastreio_numero: rastreioNumero,
+                    identificacao: identificacao || null
                 }).eq('id', editingSaidaId);
                 if (error) throw error;
 
@@ -5582,6 +5824,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 saida.data = data;
                 saida.observacao = observacao;
                 saida.rastreioNumero = rastreioNumero;
+                saida.identificacao = identificacao;
                 hideEditSaidaModal();
                 renderInicioPage();
             } catch (err) {
