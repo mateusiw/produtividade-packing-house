@@ -145,7 +145,7 @@
 
         .section-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
 
-        select, input[type="date"], input[type="text"], input[type="number"], textarea {
+        select, input[type="date"], input[type="datetime-local"], input[type="text"], input[type="number"], textarea {
             border: 1.5px solid var(--line) !important;
             border-radius: 10px !important;
             background: var(--surface-2) !important;
@@ -153,7 +153,7 @@
             transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
             font-size: 13px !important;
         }
-        select:focus, input[type="date"]:focus, input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+        select:focus, input[type="date"]:focus, input[type="datetime-local"]:focus, input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
             border-color: var(--brand) !important;
             box-shadow: 0 0 0 3px var(--brand-soft) !important;
             background: var(--surface) !important;
@@ -915,7 +915,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 </div>
                 <div class="flex-1">
                     <h2 class="text-base font-black text-slate-800 leading-tight">Registrar baixa</h2>
-                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Parceiro, produto e quantidade que saíram do estoque</p>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Destino, produto, parceiros e quantidade que saíram do estoque</p>
                 </div>
                 <button type="button" onclick="toggleBaixaEstoqueForm(false)" title="Fechar" class="text-slate-400 hover:text-slate-700 shrink-0">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -923,23 +923,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             </div>
 
             <div class="p-5 space-y-2">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <div class="relative">
-                        <select id="baixaEstoqueProdutor" onchange="onBaixaEstoqueProdutorChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
-                            <option value="" selected disabled hidden>Parceiro...</option>
-                        </select>
-                        <button type="button" id="baixaEstoqueProdutorClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueProdutor')" title="Limpar parceiro" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
-                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                        </button>
-                    </div>
-                    <div class="relative">
-                        <select id="baixaEstoqueProduto" onchange="onBaixaEstoqueProdutoChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
-                            <option value="" selected disabled hidden>Selecione</option>
-                        </select>
-                        <button type="button" id="baixaEstoqueProdutoClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueProduto')" title="Limpar produto" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
-                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                        </button>
-                    </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div class="relative">
                         <select id="baixaEstoqueDestino" onchange="onBaixaEstoqueDestinoChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
                             <option value="" selected disabled hidden>Destino (opcional)...</option>
@@ -948,12 +932,24 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                             <i data-lucide="x" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
-                    <div>
-                        <input type="number" id="baixaEstoqueQuantidade" min="1" step="1" placeholder="Qtd" oninput="renderBaixaEstoquePreview()" class="w-full p-2.5 border font-bold">
+                    <div class="relative">
+                        <select id="baixaEstoqueProduto" onchange="onBaixaEstoqueProdutoChange()" class="w-full p-2.5 pr-2.5 border font-semibold">
+                            <option value="" selected disabled hidden>Produto...</option>
+                        </select>
+                        <button type="button" id="baixaEstoqueProdutoClear" onclick="clearBaixaEstoqueSelect('baixaEstoqueProduto')" title="Limpar produto" style="display:none" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 hover:bg-red-500 text-slate-600 hover:text-white">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <div class="multiselect relative">
+                        <button type="button" id="baixaEstoqueParceirosBtn" onclick="toggleBaixaEstoqueParceirosPanel()" class="w-full h-full p-2.5 border rounded-lg border-[1.5px] border-slate-300 bg-slate-50 font-semibold text-xs text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                            <span id="baixaEstoqueParceirosLabel" class="truncate">Parceiros...</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        </button>
+                        <div id="baixaEstoqueParceirosPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
                     </div>
                 </div>
 
-                <div id="baixaEstoquePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5"></div>
+                <div id="baixaEstoqueQtdRows" class="space-y-1.5 mt-2"></div>
 
                 <div class="rounded-lg border border-slate-200 p-2.5 mt-2 space-y-2">
                     <label class="section-label !mb-0">
@@ -1156,6 +1152,13 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             <div class="p-5 space-y-3 overflow-y-auto hide-scrollbar flex-1 min-h-0">
                 <div id="fecharAlocResumo" class="rounded-xl bg-brand-50 border border-brand-100 p-3 text-[13px] font-semibold text-slate-700"></div>
+                <div>
+                    <label class="section-label">
+                        <i data-lucide="clock" class="w-3 h-3"></i> Horário que finalizou
+                        <i data-lucide="info" class="w-3 h-3 text-slate-300" title="Vem preenchido com agora, mas dá pra corrigir — útil quando a baixa é lançada depois do colaborador já ter terminado"></i>
+                    </label>
+                    <input type="datetime-local" id="fecharAlocHorario" class="w-full p-2.5 border font-semibold text-sm">
+                </div>
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label class="section-label !mb-0">Produtos que saíram</label>
@@ -1481,9 +1484,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                         <p>Registra as <b>saídas</b> do estoque (venda, transferência, etc.) e serve de checklist de embarque.</p>
                         <h4>Dar baixa no estoque</h4>
                         <ul>
-                            <li><b>Parceiro</b> e <b>Produto</b> — de qual saldo sai a baixa.</li>
                             <li><b>Destino</b> — pra onde foi (opcional).</li>
-                            <li><b>Qtd</b> — quantas caixas saíram. O app mostra um aviso se passar do saldo disponível.</li>
+                            <li><b>Produto</b> — de qual saldo sai a baixa.</li>
+                            <li><b>Parceiros</b> — pode marcar vários (múltipla seleção). Cada um vira uma baixa própria, com sua própria quantidade.</li>
+                            <li><b>Qtd</b> — uma por parceiro marcado. O app mostra um aviso se passar do saldo disponível daquele parceiro.</li>
                             <li><b>Lote (colheita)</b> — se aquele parceiro/produto tem mais de uma colheita em aberto, escolha de qual sai. Com só uma, o app já assume.</li>
                             <li><b>Número de rastreio</b> — identifica um embarque. <b>Novo rastreio</b> cria o próximo número; <b>Agrupar em existente</b> junta essa baixa a um embarque já aberto (útil quando vários produtos/parceiros saem juntos pro mesmo destino).</li>
                             <li><b>Data</b> e <b>Observação</b> — quando saiu e uma nota livre (opcional).</li>
@@ -1726,6 +1730,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         function dateToInputValue(d) {
             const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
             return local.toISOString().split('T')[0];
+        }
+
+        // 'YYYY-MM-DDTHH:mm' em horário local, pro valor default de um
+        // <input type="datetime-local"> — new Date(valorDoInput) já interpreta
+        // esse formato como horário local na volta, então não precisa de fuso
+        // ao ler de volta, só ao gerar o default a partir de um Date existente.
+        function dateToDatetimeLocalValue(d) {
+            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+            return local.toISOString().slice(0, 16);
         }
 
         // Converte 'YYYY-MM-DD' (coluna date do Postgres) para 'DD/MM/YYYY' sem passar
@@ -2387,6 +2400,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 + `de ${escapeHtml(card.produtor)} · ${isoDateToBR(card.dataColheita)}`
                 + `<span class="block mt-1 text-[11px] text-slate-500 font-semibold">Pegou às ${aloc.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · trabalhando ${humanizarDesde(aloc.criadoDate)}</span>`;
 
+            document.getElementById('fecharAlocHorario').value = dateToDatetimeLocalValue(new Date());
             renderFecharAlocLinhas();
             document.getElementById('fecharAlocacaoModal').classList.remove('hidden');
             lockBodyScroll();
@@ -2501,6 +2515,13 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             }
             if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
 
+            const horarioValue = document.getElementById('fecharAlocHorario').value;
+            const fechadaEm = horarioValue ? new Date(horarioValue) : new Date();
+            if (isNaN(fechadaEm.getTime())) return showMessageModal('Atenção', 'Horário de finalização inválido.', 'error');
+            if (fechadaEm < aloc.criadoDate) {
+                return showMessageModal('Atenção', `O horário de finalização não pode ser antes de quando ${aloc.colaborador} pegou as caixas (${aloc.criadoDate.toLocaleString('pt-BR')}).`, 'error');
+            }
+
             const informadas = linhas.reduce((s, l) => s + l.quantidade, 0);
             if (informadas !== aloc.caixas) {
                 const dif = informadas - aloc.caixas;
@@ -2525,7 +2546,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                 const { error: alocErr } = await db.from('alocacoes').update({
                     status: 'fechada',
-                    fechada_em: new Date().toISOString()
+                    fechada_em: fechadaEm.toISOString()
                 }).eq('id', aloc.id);
                 if (alocErr) throw alocErr;
 
@@ -3666,7 +3687,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         // dele (o painel do Relatórios tem seu próprio listener mais abaixo).
         document.addEventListener('click', event => {
             if (event.target.closest('.multiselect')) return;
-            document.querySelectorAll('[id^="baixasFiltro"][id$="Panel"], [id^="inicioFiltro"][id$="Panel"], [id^="desempenhoFiltro"][id$="Panel"]').forEach(panel => panel.classList.add('hidden'));
+            document.querySelectorAll('[id^="baixasFiltro"][id$="Panel"], [id^="inicioFiltro"][id$="Panel"], [id^="desempenhoFiltro"][id$="Panel"], #baixaEstoqueParceirosPanel').forEach(panel => panel.classList.add('hidden'));
         });
 
         registerMsFiltro('baixas',
@@ -3994,9 +4015,20 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         let allSaidasEstoque = [];
         let estoqueRealtimeChannel = null;
         let estoqueLoaded = false;
-        // Data do lote (colheita) de onde a baixa escolhida vai sair — obrigatório
-        // preencher quando o parceiro/produto tem mais de um lote em aberto.
-        let baixaEstoqueLoteSelecionado = null;
+        // Registrar baixa: fluxo é Destino -> Produto -> Parceiros (múltipla
+        // seleção) -> Qtd (uma por parceiro), cada parceiro selecionado vira uma
+        // linha de estoque_saidas própria, todas com o mesmo rastreio/destino/data.
+        let baixaEstoqueParceirosDisponiveis = [];
+        let baixaEstoqueParceirosSelecionados = new Set();
+        let baixaEstoqueQtdPorParceiro = new Map();
+        // Data do lote (colheita) de onde a baixa de cada parceiro vai sair —
+        // obrigatório escolher quando esse parceiro/produto tem mais de um lote
+        // em aberto (produtor -> data do lote).
+        let baixaEstoqueLotesPorParceiro = new Map();
+        // Ordem em que os parceiros selecionados foram renderizados como linha de
+        // qtd — usado pra mapear o índice da linha (id do input) de volta ao nome
+        // do parceiro sem re-renderizar tudo a cada tecla digitada.
+        let baixaEstoqueQtdRowsOrder = [];
         // Parceiros com o grupo colapsado na tabela detalhada do Início (clique
         // na linha de seção pra expandir/recolher as linhas de produto dele).
         let estoqueParceirosColapsados = new Set();
@@ -4021,16 +4053,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         function estoqueSaldoKey(produtor, produto) { return `${produtor}::${produto}`; }
 
         function populateEstoqueSelects() {
-            const produtorOptions = cadastros.produtores.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-            const produtorSelect = document.getElementById('baixaEstoqueProdutor');
-            const produtorAtual = produtorSelect.value;
-            produtorSelect.innerHTML = '<option value="" selected disabled hidden>Parceiro...</option>' + produtorOptions;
-            produtorSelect.value = produtorAtual;
-
             const produtoOptions = cadastros.produtos.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
             const produtoSelect = document.getElementById('baixaEstoqueProduto');
             const produtoAtual = produtoSelect.value;
-            produtoSelect.innerHTML = '<option value="" selected disabled hidden>Selecione</option>' + produtoOptions;
+            produtoSelect.innerHTML = '<option value="" selected disabled hidden>Produto...</option>' + produtoOptions;
             produtoSelect.value = produtoAtual;
 
             const destinoOptions = cadastros.destinos.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
@@ -4039,7 +4065,74 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             destinoSelect.innerHTML = '<option value="" selected disabled hidden>Destino (opcional)...</option>' + destinoOptions;
             destinoSelect.value = destinoAtual;
 
-            ['baixaEstoqueProdutor', 'baixaEstoqueProduto', 'baixaEstoqueDestino'].forEach(updateEstoqueSelectClearUI);
+            ['baixaEstoqueProduto', 'baixaEstoqueDestino'].forEach(updateEstoqueSelectClearUI);
+            refreshBaixaEstoqueParceirosDisponiveis();
+        }
+
+        // Reaplica a lista de parceiros disponíveis pra baixa: se já tem produto
+        // escolhido, restringe aos que realmente têm (ou já tiveram) esse produto
+        // — mesma ideia do fluxo antigo (Parceiro -> Produto), só que invertida,
+        // já que agora Produto vem antes de Parceiros. Tira da seleção quem não
+        // está mais disponível (produto trocado pra um que esse parceiro nunca
+        // teve).
+        function refreshBaixaEstoqueParceirosDisponiveis() {
+            const produto = document.getElementById('baixaEstoqueProduto').value;
+            let disponiveis = cadastros.produtores;
+            if (produto) {
+                const saldoMap = computeEstoqueSaldo();
+                const produtoresComProduto = new Set(
+                    [...saldoMap.values()].filter(e => e.produto === produto && (e.produzido > 0 || e.baixado > 0)).map(e => e.produtor)
+                );
+                if (produtoresComProduto.size > 0) disponiveis = cadastros.produtores.filter(p => produtoresComProduto.has(p));
+            }
+            baixaEstoqueParceirosDisponiveis = disponiveis;
+            [...baixaEstoqueParceirosSelecionados].forEach(p => {
+                if (!disponiveis.includes(p)) {
+                    baixaEstoqueParceirosSelecionados.delete(p);
+                    baixaEstoqueQtdPorParceiro.delete(p);
+                    baixaEstoqueLotesPorParceiro.delete(p);
+                }
+            });
+            renderBaixaEstoqueParceirosPanel();
+            updateBaixaEstoqueParceirosLabel();
+        }
+
+        function renderBaixaEstoqueParceirosPanel() {
+            const panel = document.getElementById('baixaEstoqueParceirosPanel');
+            if (!panel) return;
+            panel.innerHTML = baixaEstoqueParceirosDisponiveis.length
+                ? baixaEstoqueParceirosDisponiveis.map((p, idx) => `
+                    <label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer text-xs">
+                        <input type="checkbox" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0" ${baixaEstoqueParceirosSelecionados.has(p) ? 'checked' : ''} onchange="toggleBaixaEstoqueParceiro(${idx}, this.checked)">
+                        <span class="truncate">${escapeHtml(p)}</span>
+                    </label>
+                `).join('')
+                : '<div class="px-3 py-2 text-xs text-slate-400 italic">Nenhum parceiro disponível</div>';
+        }
+
+        function updateBaixaEstoqueParceirosLabel() {
+            const label = document.getElementById('baixaEstoqueParceirosLabel');
+            if (!label) return;
+            const n = baixaEstoqueParceirosSelecionados.size;
+            label.innerText = n === 0 ? 'Parceiros...' : n === 1 ? [...baixaEstoqueParceirosSelecionados][0] : `${n} selecionados`;
+        }
+
+        function toggleBaixaEstoqueParceirosPanel() {
+            document.getElementById('baixaEstoqueParceirosPanel').classList.toggle('hidden');
+        }
+
+        function toggleBaixaEstoqueParceiro(idx, checked) {
+            const produtor = baixaEstoqueParceirosDisponiveis[idx];
+            if (!produtor) return;
+            if (checked) {
+                baixaEstoqueParceirosSelecionados.add(produtor);
+            } else {
+                baixaEstoqueParceirosSelecionados.delete(produtor);
+                baixaEstoqueQtdPorParceiro.delete(produtor);
+                baixaEstoqueLotesPorParceiro.delete(produtor);
+            }
+            updateBaixaEstoqueParceirosLabel();
+            renderBaixaEstoqueQtdRows();
         }
 
         // ---------- Número de rastreio (embarque) ao registrar uma baixa ----------
@@ -4101,39 +4194,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             }).join('');
         }
 
-        // Ao escolher o parceiro, restringe o select de produto aos que esse
-        // parceiro realmente já teve produzidos — assim o fluxo fica
-        // Parceiro → Produto → Quantidade em vez de misturar produtos de todo
-        // mundo. Se o parceiro ainda não produziu nada, mostra a lista cheia.
-        function onBaixaEstoqueProdutorChange() {
-            baixaEstoqueLoteSelecionado = null;
-            const produtor = document.getElementById('baixaEstoqueProdutor').value;
-            const produtoSelect = document.getElementById('baixaEstoqueProduto');
-            const valorAtual = produtoSelect.value;
-
-            let produtosDisponiveis = cadastros.produtos;
-            if (produtor) {
-                const saldoMap = computeEstoqueSaldo();
-                const produzidosPeloProdutor = new Set(
-                    [...saldoMap.values()].filter(e => e.produtor === produtor && e.produzido > 0).map(e => e.produto)
-                );
-                if (produzidosPeloProdutor.size > 0) {
-                    produtosDisponiveis = cadastros.produtos.filter(p => produzidosPeloProdutor.has(p));
-                }
-            }
-
-            produtoSelect.innerHTML = '<option value="" selected disabled hidden>Selecione</option>' + produtosDisponiveis.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-            if (produtosDisponiveis.includes(valorAtual)) produtoSelect.value = valorAtual;
-
-            updateEstoqueSelectClearUI('baixaEstoqueProdutor');
-            updateEstoqueSelectClearUI('baixaEstoqueProduto');
-            renderBaixaEstoquePreview();
-        }
-
+        // Ao escolher o produto, restringe o painel de parceiros aos que
+        // realmente já produziram esse produto — mesma ideia de antes (evitar
+        // misturar parceiros de tudo quanto é produto), só que agora o produto
+        // vem primeiro no fluxo.
         function onBaixaEstoqueProdutoChange() {
-            baixaEstoqueLoteSelecionado = null;
             updateEstoqueSelectClearUI('baixaEstoqueProduto');
-            renderBaixaEstoquePreview();
+            refreshBaixaEstoqueParceirosDisponiveis();
+            renderBaixaEstoqueQtdRows();
         }
 
         function onBaixaEstoqueDestinoChange() {
@@ -4141,8 +4209,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         }
 
         // Mostra/esconde o X de limpar em cima do select conforme ele tem valor
-        // ou não — os três selects de "Registrar baixa" (parceiro/produto/destino)
-        // usam essa mesma lógica.
+        // ou não — os selects de "Registrar baixa" (produto/destino) usam essa
+        // mesma lógica.
         function updateEstoqueSelectClearUI(selectId) {
             const select = document.getElementById(selectId);
             const btn = document.getElementById(selectId + 'Clear');
@@ -4158,115 +4226,126 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const select = document.getElementById(selectId);
             if (!select) return;
             select.value = '';
-            if (selectId === 'baixaEstoqueProdutor') onBaixaEstoqueProdutorChange();
-            else if (selectId === 'baixaEstoqueProduto') onBaixaEstoqueProdutoChange();
-            else { updateEstoqueSelectClearUI(selectId); renderBaixaEstoquePreview(); }
+            if (selectId === 'baixaEstoqueProduto') onBaixaEstoqueProdutoChange();
+            else updateEstoqueSelectClearUI(selectId);
         }
 
-        function selecionarLoteBaixa(data) {
-            baixaEstoqueLoteSelecionado = data;
-            renderBaixaEstoquePreview();
+        // Troca de qual lote (data da colheita) sai a baixa de UM parceiro
+        // específico da lista — cada parceiro tem seu próprio lote escolhido,
+        // já que cada um pode ter lotes em aberto diferentes.
+        function selecionarLoteBaixaParceiro(idx, data) {
+            const produtor = baixaEstoqueQtdRowsOrder[idx];
+            if (!produtor) return;
+            baixaEstoqueLotesPorParceiro.set(produtor, data);
+            renderBaixaEstoqueQtdRows();
         }
 
-        // Painel de contexto do formulário de baixa: mostra o estoque do parceiro
-        // escolhido (produto por produto, se ainda não escolheu um produto
-        // específico) e, quando parceiro+produto+quantidade estão preenchidos,
-        // o saldo atual e o que vai ficar depois de confirmar a baixa — pra dar
-        // pra ver antes de confirmar em vez de descobrir só depois.
-        function renderBaixaEstoquePreview() {
-            const previewEl = document.getElementById('baixaEstoquePreview');
-            const produtor = document.getElementById('baixaEstoqueProdutor').value;
+        // Uma linha de quantidade por parceiro selecionado: mostra o estoque
+        // atual dele, um campo de qtd próprio e (se tiver mais de um lote em
+        // aberto) o seletor de qual lote sai. Re-renderiza tudo quando
+        // produto/seleção de parceiros/lote mudam; a digitação na quantidade em
+        // si NÃO passa por aqui (ver onBaixaEstoqueQtdInput) pra não perder o
+        // foco do campo a cada tecla.
+        function renderBaixaEstoqueQtdRows() {
+            const container = document.getElementById('baixaEstoqueQtdRows');
+            if (!container) return;
             const produto = document.getElementById('baixaEstoqueProduto').value;
-            const quantidade = Number(document.getElementById('baixaEstoqueQuantidade').value) || 0;
+            const parceiros = [...baixaEstoqueParceirosSelecionados];
+            baixaEstoqueQtdRowsOrder = parceiros;
 
-            if (!produtor) {
-                previewEl.classList.add('hidden');
-                previewEl.innerHTML = '';
+            if (!produto) {
+                container.innerHTML = '<p class="text-xs text-slate-400 italic px-1">Escolha o produto e os parceiros pra lançar a quantidade de cada um.</p>';
+                return;
+            }
+            if (parceiros.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 italic px-1">Selecione ao menos um parceiro.</p>';
                 return;
             }
 
             const saldoMap = computeEstoqueSaldo();
+            container.innerHTML = parceiros.map((produtor, idx) => {
+                const entry = saldoMap.get(estoqueSaldoKey(produtor, produto)) || { produzido: 0, baixado: 0 };
+                const saldoAtual = entry.produzido - entry.baixado;
+                const quantidade = Number(baixaEstoqueQtdPorParceiro.get(produtor)) || 0;
+                const saldoDepois = saldoAtual - quantidade;
+                const depoisClass = saldoDepois < 0 ? 'text-red-600' : 'text-brand-700';
 
-            if (!produto) {
-                const linhasParceiro = [...saldoMap.values()]
-                    .filter(e => e.produtor === produtor && (e.produzido > 0 || e.baixado > 0))
-                    .sort((a, b) => a.produto.localeCompare(b.produto));
+                // Datas com saldo (mais antiga primeiro). Com só um lote em
+                // aberto, a baixa sai dele automaticamente — com mais de um,
+                // obriga escolher de qual lote sai (em vez de assumir FIFO
+                // silenciosamente).
+                const datasComSaldo = computeEstoqueDetalhePorData(produtor, produto).filter(d => d.restante > 0);
+                if (datasComSaldo.length === 1) baixaEstoqueLotesPorParceiro.set(produtor, datasComSaldo[0].data);
+                else if (!datasComSaldo.some(d => d.data === baixaEstoqueLotesPorParceiro.get(produtor))) baixaEstoqueLotesPorParceiro.delete(produtor);
 
-                previewEl.innerHTML = linhasParceiro.length === 0
-                    ? `<p class="text-xs text-slate-400 italic">${escapeHtml(produtor)} ainda não tem nenhuma caixa em estoque.</p>`
-                    : `
-                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Estoque de ${escapeHtml(produtor)}</p>
-                        <div class="space-y-1">
-                            ${linhasParceiro.map(l => {
-                                const saldo = l.produzido - l.baixado;
-                                const saldoClass = saldo < 0 ? 'text-red-600' : 'text-slate-700';
-                                return `<div class="flex items-center justify-between text-xs gap-2">
-                                    <span class="text-slate-600 truncate">${escapeHtml(l.produto)}</span>
-                                    <span class="font-bold ${saldoClass} shrink-0">${saldo} cx</span>
-                                </div>`;
-                            }).join('')}
-                        </div>
-                    `;
-                previewEl.classList.remove('hidden');
-                return;
-            }
-
-            const entry = saldoMap.get(estoqueSaldoKey(produtor, produto)) || { produzido: 0, baixado: 0 };
-            const saldoAtual = entry.produzido - entry.baixado;
-            const saldoDepois = saldoAtual - quantidade;
-            const depoisClass = saldoDepois < 0 ? 'text-red-600' : 'text-brand-700';
-
-            // Datas com saldo (mais antiga primeiro). Com só um lote em aberto,
-            // a baixa sai dele automaticamente — com mais de um, obriga escolher
-            // de qual lote sai (em vez de assumir FIFO silenciosamente).
-            const datasComSaldo = computeEstoqueDetalhePorData(produtor, produto).filter(d => d.restante > 0);
-            if (datasComSaldo.length === 1) baixaEstoqueLoteSelecionado = datasComSaldo[0].data;
-            else if (!datasComSaldo.some(d => d.data === baixaEstoqueLoteSelecionado)) baixaEstoqueLoteSelecionado = null;
-
-            const loteEscolhido = datasComSaldo.find(d => d.data === baixaEstoqueLoteSelecionado);
-            const loteExcedeAviso = loteEscolhido && quantidade > loteEscolhido.restante
-                ? `<p class="text-[11px] text-amber-600 font-semibold mt-1">Esse lote só tem ${loteEscolhido.restante} cx — a baixa vai além do que sobrou nele.</p>`
-                : '';
-
-            const loteHtml = datasComSaldo.length > 1
-                ? `
-                    <div class="mt-2 pt-2 border-t border-slate-200">
-                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">${escapeHtml(produtor)} tem ${datasComSaldo.length} lotes em aberto — de qual sai a baixa?</p>
-                        <div class="flex flex-wrap gap-1.5">
-                            ${datasComSaldo.map(d => `
-                                <button type="button" onclick="selecionarLoteBaixa('${d.data}')" class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-colors ${baixaEstoqueLoteSelecionado === d.data ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:border-brand-400'}">
-                                    ${isoDateToBR(d.data)} · ${d.restante} cx
-                                </button>
-                            `).join('')}
-                        </div>
-                        ${!baixaEstoqueLoteSelecionado ? '<p class="text-[11px] text-red-600 font-semibold mt-1.5">Selecione de qual lote (data) sai a baixa.</p>' : ''}
-                        ${loteExcedeAviso}
-                    </div>
-                `
-                : datasComSaldo.length === 1
-                    ? `
-                        <div class="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
-                            <span class="text-slate-500">Lote:</span>
-                            <span class="font-bold text-slate-700">${isoDateToBR(datasComSaldo[0].data)} · ${datasComSaldo[0].restante} cx</span>
-                        </div>
-                        ${loteExcedeAviso}
-                    `
+                const loteSelecionado = baixaEstoqueLotesPorParceiro.get(produtor);
+                const loteEscolhido = datasComSaldo.find(d => d.data === loteSelecionado);
+                const loteExcedeAviso = loteEscolhido && quantidade > loteEscolhido.restante
+                    ? `<p class="text-[11px] text-amber-600 font-semibold mt-1">Esse lote só tem ${loteEscolhido.restante} cx — a baixa vai além do que sobrou nele.</p>`
                     : '';
 
-            previewEl.innerHTML = `
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <div class="min-w-0">
-                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">${escapeHtml(produto)} · ${escapeHtml(produtor)}</p>
-                        <p class="text-xs text-slate-500 mt-0.5">Estoque atual: <span class="font-bold text-slate-700">${saldoAtual} cx</span></p>
+                const loteHtml = datasComSaldo.length > 1
+                    ? `
+                        <div class="mt-1.5 pt-1.5 border-t border-slate-200">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">${datasComSaldo.length} lotes em aberto — de qual sai a baixa?</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${datasComSaldo.map(d => `
+                                    <button type="button" onclick="selecionarLoteBaixaParceiro(${idx}, '${d.data}')" class="px-2 py-1 rounded-lg border text-[11px] font-bold transition-colors ${loteSelecionado === d.data ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:border-brand-400'}">
+                                        ${isoDateToBR(d.data)} · ${d.restante} cx
+                                    </button>
+                                `).join('')}
+                            </div>
+                            ${!loteSelecionado ? '<p class="text-[11px] text-red-600 font-semibold mt-1">Selecione de qual lote (data) sai a baixa.</p>' : ''}
+                            ${loteExcedeAviso}
+                        </div>
+                    `
+                    : datasComSaldo.length === 1
+                        ? `
+                            <div class="mt-1.5 pt-1.5 border-t border-slate-200 flex items-center justify-between text-[11px]">
+                                <span class="text-slate-400">Lote:</span>
+                                <span class="font-bold text-slate-600">${isoDateToBR(datasComSaldo[0].data)} · ${datasComSaldo[0].restante} cx</span>
+                            </div>
+                            ${loteExcedeAviso}
+                        `
+                        : '';
+
+                return `
+                    <div class="rounded-lg border border-slate-200 p-2.5">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="min-w-0">
+                                <p class="text-xs font-black text-slate-700 truncate">${escapeHtml(produtor)}</p>
+                                <p class="text-[11px] text-slate-400">Estoque atual: <span class="font-bold text-slate-600">${saldoAtual} cx</span></p>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <input type="number" min="1" step="1" id="baixaQtdInput_${idx}" value="${baixaEstoqueQtdPorParceiro.has(produtor) ? baixaEstoqueQtdPorParceiro.get(produtor) : ''}" placeholder="Qtd" oninput="onBaixaEstoqueQtdInput(${idx}, this.value)" class="w-20 p-2 border font-bold text-sm">
+                                <span class="text-[11px] text-slate-500 text-right">após: <span id="qtdDepois_${idx}" class="font-bold ${depoisClass}">${saldoDepois} cx</span></span>
+                            </div>
+                        </div>
+                        ${loteHtml}
                     </div>
-                    <div class="text-right shrink-0">
-                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Após a baixa</p>
-                        <p class="text-lg font-black leading-tight ${depoisClass}">${saldoDepois} cx</p>
-                    </div>
-                </div>
-                ${loteHtml}
-            `;
-            previewEl.classList.remove('hidden');
+                `;
+            }).join('');
+        }
+
+        // Atualiza só o mapa de quantidades + o "após" da linha correspondente
+        // via DOM direto (sem re-renderizar renderBaixaEstoqueQtdRows) — assim o
+        // campo de input não perde o foco a cada tecla digitada.
+        function onBaixaEstoqueQtdInput(idx, value) {
+            const produtor = baixaEstoqueQtdRowsOrder[idx];
+            if (!produtor) return;
+            baixaEstoqueQtdPorParceiro.set(produtor, Number(value) || 0);
+
+            const produto = document.getElementById('baixaEstoqueProduto').value;
+            const saldoMap = computeEstoqueSaldo();
+            const entry = saldoMap.get(estoqueSaldoKey(produtor, produto)) || { produzido: 0, baixado: 0 };
+            const saldoAtual = entry.produzido - entry.baixado;
+            const saldoDepois = saldoAtual - (Number(value) || 0);
+
+            const span = document.getElementById('qtdDepois_' + idx);
+            if (!span) return;
+            span.textContent = `${saldoDepois} cx`;
+            span.classList.toggle('text-red-600', saldoDepois < 0);
+            span.classList.toggle('text-brand-700', saldoDepois >= 0);
         }
 
         async function loadEstoqueData() {
@@ -4746,7 +4825,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 }).join('');
             }
 
-            renderBaixaEstoquePreview();
+            renderBaixaEstoqueQtdRows();
             lucide.createIcons();
         }
 
@@ -5290,34 +5369,66 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const abrir = forceOpen !== undefined ? forceOpen : modal.classList.contains('hidden');
             modal.classList.toggle('hidden', !abrir);
             modal.classList.toggle('flex', abrir);
-            if (abrir) { lockBodyScroll(); setRastreioMode('novo'); } else unlockBodyScroll();
+            if (abrir) { lockBodyScroll(); setRastreioMode('novo'); renderBaixaEstoqueQtdRows(); } else unlockBodyScroll();
             lucide.createIcons();
         }
 
-        // Preenche parceiro + produto no formulário a partir de um clique numa
+        // Preenche produto + parceiro no formulário a partir de um clique numa
         // linha da tabela de saldo, e foca a quantidade pra já digitar a baixa.
         function selecionarBaixaEstoque(produtor, produto) {
             toggleBaixaEstoqueForm(true);
-            document.getElementById('baixaEstoqueProdutor').value = produtor;
-            onBaixaEstoqueProdutorChange();
             document.getElementById('baixaEstoqueProduto').value = produto;
-            updateEstoqueSelectClearUI('baixaEstoqueProduto');
-            renderBaixaEstoquePreview();
-            document.getElementById('baixaEstoqueQuantidade').focus();
+            onBaixaEstoqueProdutoChange();
+            baixaEstoqueParceirosSelecionados.add(produtor);
+            updateBaixaEstoqueParceirosLabel();
+            renderBaixaEstoqueParceirosPanel();
+            renderBaixaEstoqueQtdRows();
+            const idx = baixaEstoqueQtdRowsOrder.indexOf(produtor);
+            if (idx >= 0) document.getElementById('baixaQtdInput_' + idx)?.focus();
         }
 
         async function registrarBaixaEstoque() {
-            const produtor = document.getElementById('baixaEstoqueProdutor').value;
             const produto = document.getElementById('baixaEstoqueProduto').value;
             const destino = document.getElementById('baixaEstoqueDestino').value;
-            const quantidade = Number(document.getElementById('baixaEstoqueQuantidade').value);
             const data = document.getElementById('baixaEstoqueData').value || todayLocalDateStr();
             const observacao = document.getElementById('baixaEstoqueObservacao').value.trim();
+            const parceiros = [...baixaEstoqueParceirosSelecionados];
 
-            if (!produtor) return showMessageModal('Atenção', 'Selecione o parceiro.', 'error');
             if (!produto) return showMessageModal('Atenção', 'Selecione o produto.', 'error');
-            if (!quantidade || quantidade <= 0) return showMessageModal('Atenção', 'Informe a quantidade de caixas.', 'error');
+            if (parceiros.length === 0) return showMessageModal('Atenção', 'Selecione ao menos um parceiro.', 'error');
             if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
+
+            // Monta um item por parceiro selecionado, cada um com sua própria
+            // quantidade e lote — valida tudo antes de mandar qualquer coisa pro
+            // banco, pra não deixar a baixa pela metade se um parceiro no meio
+            // da lista estiver com dado faltando.
+            const itens = [];
+            for (const produtor of parceiros) {
+                const quantidade = Number(baixaEstoqueQtdPorParceiro.get(produtor)) || 0;
+                if (!quantidade || quantidade <= 0) {
+                    return showMessageModal('Atenção', `Informe a quantidade de caixas para ${produtor}.`, 'error');
+                }
+                const datasComSaldo = computeEstoqueDetalhePorData(produtor, produto).filter(d => d.restante > 0);
+                if (datasComSaldo.length > 1 && !baixaEstoqueLotesPorParceiro.get(produtor)) {
+                    return showMessageModal('Atenção', `${produtor} tem mais de um lote de "${produto}" em aberto. Selecione de qual lote (data) sai a baixa.`, 'error');
+                }
+                const loteData = datasComSaldo.length === 1 ? datasComSaldo[0].data : (baixaEstoqueLotesPorParceiro.get(produtor) || null);
+                itens.push({ produtor, quantidade, loteData });
+            }
+
+            const saldoAtualMap = computeEstoqueSaldo();
+            const negativos = itens.filter(it => {
+                const entry = saldoAtualMap.get(estoqueSaldoKey(it.produtor, produto)) || { produzido: 0, baixado: 0 };
+                return it.quantidade > (entry.produzido - entry.baixado);
+            });
+            if (negativos.length > 0) {
+                const lista = negativos.map(it => it.produtor).join(', ');
+                const confirmed = await showConfirmActionModal(
+                    'Estoque ficará negativo',
+                    `Dar baixa deixa o saldo de "${produto}" negativo para: ${lista}. Continuar mesmo assim?`
+                );
+                if (!confirmed) return;
+            }
 
             let rastreioNumero;
             if (rastreioModoAtual === 'existente') {
@@ -5328,35 +5439,24 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 rastreioNumero = proximoRastreioNumero();
             }
 
-            const datasComSaldo = computeEstoqueDetalhePorData(produtor, produto).filter(d => d.restante > 0);
-            if (datasComSaldo.length > 1 && !baixaEstoqueLoteSelecionado) {
-                return showMessageModal('Atenção', `${produtor} tem mais de um lote de "${produto}" em aberto. Selecione de qual lote (data) sai a baixa.`, 'error');
-            }
-            const loteData = datasComSaldo.length === 1 ? datasComSaldo[0].data : baixaEstoqueLoteSelecionado;
-
-            const saldoAtual = computeEstoqueSaldo();
-            const entry = saldoAtual.get(estoqueSaldoKey(produtor, produto)) || { produzido: 0, baixado: 0 };
-            const saldoDisponivel = entry.produzido - entry.baixado;
-            if (quantidade > saldoDisponivel) {
-                const confirmed = await showConfirmActionModal(
-                    'Estoque ficará negativo',
-                    `"${produto}" de ${produtor} tem ${saldoDisponivel} cx em estoque. Dar baixa de ${quantidade} cx deixa o saldo negativo. Continuar mesmo assim?`
-                );
-                if (!confirmed) return;
-            }
-
             try {
-                const { data: row, error } = await db.from('estoque_saidas').insert({
-                    produtor, produto, destino: destino || null, quantidade, data, lote_data: loteData || null, observacao: observacao || null, rastreio_numero: rastreioNumero
-                }).select().single();
+                const rows = itens.map(it => ({
+                    produtor: it.produtor, produto, destino: destino || null, quantidade: it.quantidade,
+                    data, lote_data: it.loteData || null, observacao: observacao || null, rastreio_numero: rastreioNumero
+                }));
+                const { data: inserted, error } = await db.from('estoque_saidas').insert(rows).select();
                 if (error) throw error;
 
-                if (!allSaidasEstoque.some(s => s.id === row.id)) {
-                    allSaidasEstoque.unshift(mapSaidaRow(row));
-                }
-                document.getElementById('baixaEstoqueQuantidade').value = '';
+                inserted.forEach(row => {
+                    if (!allSaidasEstoque.some(s => s.id === row.id)) allSaidasEstoque.unshift(mapSaidaRow(row));
+                });
+                baixaEstoqueParceirosSelecionados.clear();
+                baixaEstoqueQtdPorParceiro.clear();
+                baixaEstoqueLotesPorParceiro.clear();
                 document.getElementById('baixaEstoqueObservacao').value = '';
-                baixaEstoqueLoteSelecionado = null;
+                updateBaixaEstoqueParceirosLabel();
+                renderBaixaEstoqueParceirosPanel();
+                renderBaixaEstoqueQtdRows();
                 toggleBaixaEstoqueForm(false);
                 renderInicioPage();
             } catch (err) {
