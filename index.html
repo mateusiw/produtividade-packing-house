@@ -288,6 +288,40 @@
             .preview-wrapper { padding: 10px; border-radius: 18px; }
         }
 
+        /* "Lotes em Estoque" no celular: em vez de rolar de lado feito as
+           outras tabelas do app (.report-table min-width acima), essa aqui
+           vira uma lista de cartões — cada linha empilhada verticalmente com
+           um rotulinho por campo (via data-label + content: attr()), sem
+           precisar duplicar a renderização em HTML/JS separado pro mobile. */
+        @media (max-width: 640px) {
+            #lotesTable table.report-table { min-width: 0; width: 100%; }
+            #lotesTable table.report-table thead { display: none; }
+            #lotesTable table.report-table,
+            #lotesTable table.report-table tbody,
+            #lotesTable table.report-table tfoot,
+            #lotesTable table.report-table tr {
+                display: block; width: 100%;
+            }
+            #lotesTable table.report-table tbody tr {
+                border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; overflow: hidden;
+            }
+            #lotesTable table.report-table tbody tr:nth-child(even) td { background: transparent !important; }
+            #lotesTable table.report-table td {
+                display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                text-align: right; border-bottom: 1px dashed var(--line);
+            }
+            #lotesTable table.report-table td:last-child { border-bottom: none; }
+            #lotesTable table.report-table td::before {
+                content: attr(data-label);
+                font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+                color: var(--muted); text-align: left; flex-shrink: 0;
+            }
+            #lotesTable table.report-table tfoot tr {
+                background: var(--brand-soft) !important; border: 1.5px solid var(--brand-soft-strong); border-radius: 12px;
+            }
+            #lotesTable table.report-table tfoot td { color: var(--brand-dark); font-weight: 800; }
+        }
+
         /* Suporte a tema escuro pras classes utilitárias do Tailwind espalhadas
            pelo HTML/JS (bg-white, text-slate-*...) — como são geradas em
            centenas de lugares (inclusive dentro de template strings no JS),
@@ -351,11 +385,14 @@
                 <button type="button" onclick="switchPage('estoque')" data-page="estoque" title="Entregas">
                     <i data-lucide="truck" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Entregas</span>
                 </button>
-                <button type="button" onclick="switchPage('baixas')" data-page="baixas" title="Baixas">
-                    <i data-lucide="list-checks" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Baixas</span>
+                <button type="button" onclick="switchPage('baixas')" data-page="baixas" title="Rastreamento">
+                    <i data-lucide="list-checks" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Rastreamento</span>
                 </button>
-                <button type="button" onclick="switchPage('movimentacoes')" data-page="movimentacoes" title="Movimentações">
-                    <i data-lucide="arrow-left-right" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Movimentações</span>
+                <button type="button" onclick="switchPage('lotes')" data-page="lotes" title="Lotes em Estoque">
+                    <i data-lucide="layers" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Lotes em Estoque</span>
+                </button>
+                <button type="button" onclick="switchPage('movimentacoes')" data-page="movimentacoes" title="Histórico">
+                    <i data-lucide="arrow-left-right" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Histórico</span>
                 </button>
                 <button type="button" onclick="switchPage('desempenho')" data-page="desempenho" title="Desempenho">
                     <i data-lucide="trophy" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Desempenho</span>
@@ -665,7 +702,67 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 <button type="button" onclick="limparFiltrosBaixas()" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline ml-auto">Limpar filtros</button>
             </div>
         </div>
-        <div id="estoqueHistorico" class="rounded-xl border border-slate-200 divide-y divide-slate-100">
+        <div id="estoqueHistorico" class="rounded-xl border border-slate-200 overflow-x-auto">
+            <div class="summary-row"><span class="text-xs text-slate-400 italic">Carregando...</span></div>
+        </div>
+    </div>
+
+    <!-- PÁGINA: LOTES EM ESTOQUE (o que ainda tem em mãos, por data da colheita → parceiro → produto) -->
+    <div id="pageLotes" class="hidden">
+        <div id="lotesKpis" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"></div>
+        <div id="lotesKpisPorProdutoWrapper" class="mb-4">
+            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Saldo em estoque por produto (nos filtros aplicados)</span>
+            <div id="lotesKpisPorProduto" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-3 mb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div class="multiselect relative">
+                    <label class="section-label">Parceiro</label>
+                    <button type="button" onclick="toggleMsFiltro('lotes','parceiro')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                        <span id="lotesFiltroParceiroLabel" class="truncate">Todos</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                    </button>
+                    <div id="lotesFiltroParceiroPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+                <div class="multiselect relative">
+                    <label class="section-label">Produto</label>
+                    <button type="button" onclick="toggleMsFiltro('lotes','produto')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                        <span id="lotesFiltroProdutoLabel" class="truncate">Todos</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                    </button>
+                    <div id="lotesFiltroProdutoPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-end gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
+                <div>
+                    <label class="section-label !mb-1">De (colheita)</label>
+                    <input type="date" id="lotesDataInicio" onchange="renderLotesPage()" class="p-2 border font-semibold text-xs">
+                </div>
+                <div>
+                    <label class="section-label !mb-1">Até (colheita)</label>
+                    <input type="date" id="lotesDataFim" onchange="renderLotesPage()" class="p-2 border font-semibold text-xs">
+                </div>
+                <div class="flex gap-1.5 flex-wrap" id="lotesFiltros">
+                    <button type="button" onclick="setLotesQuickFilter('7dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">7 dias</button>
+                    <button type="button" onclick="setLotesQuickFilter('30dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">30 dias</button>
+                    <button type="button" onclick="setLotesQuickFilter('tudo')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Tudo</button>
+                </div>
+                <button type="button" onclick="limparFiltrosLotes()" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline ml-auto">Limpar filtros</button>
+            </div>
+        </div>
+        <p class="text-[11px] text-slate-400 font-medium mb-2">Só mostra lotes que ainda têm caixas em aberto (saldo &gt; 0) — o que já foi todo baixado não aparece aqui.</p>
+        <!-- No celular a tabela vira uma lista de cartões (ver CSS #lotesTable
+             mais abaixo) e perde o clique-pra-ordenar do cabeçalho — esse
+             select cobre a mesma função, só aparecendo abaixo do breakpoint sm. -->
+        <div class="sm:hidden mb-2">
+            <select id="lotesSortMobile" onchange="setLotesSort(this.value)" class="w-full p-2 border font-semibold text-xs">
+                <option value="data">Ordenar por: Data da Colheita</option>
+                <option value="produtor">Ordenar por: Parceiro</option>
+                <option value="produto">Ordenar por: Produto</option>
+                <option value="restante">Ordenar por: Qtd em Estoque</option>
+            </select>
+        </div>
+        <div id="lotesTable" class="rounded-xl border border-slate-200 overflow-x-auto">
             <div class="summary-row"><span class="text-xs text-slate-400 italic">Carregando...</span></div>
         </div>
     </div>
@@ -1458,7 +1555,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <div class="ajuda-step"><span class="ajuda-step-num">1</span><span><b>Entrega</b> — o parceiro traz as caixas cruas. Você registra na aba <span class="tag">Entregas</span>: parceiro, data da colheita e quantidade de caixas.</span></div>
                     <div class="ajuda-step"><span class="ajuda-step-num">2</span><span><b>Retirada</b> — um colaborador pega parte dessas caixas pra trabalhar (ex: pegou 10 das 100). Você registra quem pegou e quantas.</span></div>
                     <div class="ajuda-step"><span class="ajuda-step-num">3</span><span><b>Fechar a retirada</b> — quando ele termina, você informa em que produtos aquelas caixas viraram (ex: 5 Filetado + 5 Brócolis 300g).</span></div>
-                    <div class="ajuda-step"><span class="ajuda-step-num">4</span><span><b>Baixa</b> — o que foi produzido entra no estoque. Depois, quando o produto sai (venda, transferência), você dá baixa na aba <span class="tag">Baixas</span>.</span></div>
+                    <div class="ajuda-step"><span class="ajuda-step-num">4</span><span><b>Baixa</b> — o que foi produzido entra no estoque. Depois, quando o produto sai (venda, transferência), você dá baixa na aba <span class="tag">Rastreamento</span>.</span></div>
                 </div>
 
                 <details class="ajuda-sec">
@@ -1501,6 +1598,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                         <h4>2 · Registrar quem pegou caixas</h4>
                         <p>No bloco <b>Registrar quem pegou caixas</b>: escolha o <b>Colaborador</b>, digite a <b>quantidade de caixas</b> que ele pegou e clique no <b>+</b>. Aparece uma linha em "Em processamento" com o nome dele.</p>
                         <p>Pegar as caixas já abaixa o "não processado" (elas passam a contar como "em proc.") — só quando você fechar a retirada é que elas viram "processado".</p>
+                        <p>O app não deixa pegar mais caixas do que ainda sobrou "não processado" naquela entrega — se tentar pegar mais do que existe, mostra um aviso e bloqueia.</p>
                         <h4>3 · Fechar a retirada / dar baixa</h4>
                         <p>Na linha do colaborador, clique em <b>Fechar</b>. No modal:</p>
                         <ul>
@@ -1544,7 +1642,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 </details>
 
                 <details class="ajuda-sec">
-                    <summary><i data-lucide="list-checks" class="w-4 h-4 text-brand-600 shrink-0"></i> Aba Baixas — tirar produto do estoque</summary>
+                    <summary><i data-lucide="list-checks" class="w-4 h-4 text-brand-600 shrink-0"></i> Aba Rastreamento — tirar produto do estoque</summary>
                     <div class="ajuda-sec-body">
                         <p>Registra as <b>saídas</b> do estoque (venda, transferência, etc.) e serve de checklist de embarque.</p>
                         <h4>Dar baixa no estoque</h4>
@@ -1564,7 +1662,17 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 </details>
 
                 <details class="ajuda-sec">
-                    <summary><i data-lucide="arrow-left-right" class="w-4 h-4 text-brand-600 shrink-0"></i> Aba Movimentações</summary>
+                    <summary><i data-lucide="layers" class="w-4 h-4 text-brand-600 shrink-0"></i> Aba Lotes em Estoque — consulta por data</summary>
+                    <div class="ajuda-sec-body">
+                        <p>Só consulta (não lança nada): 4 indicadores no topo (lotes com saldo, total em caixas, parceiros e produtos envolvidos), um KPI por produto (saldo somado de todos os parceiros, maior primeiro) e uma tabela com uma linha por <b>Data da colheita</b> + <b>Parceiro</b> + <b>Produto</b>, mostrando quanto sobrou de cada lote. Um lote já totalmente baixado não aparece mais aqui.</p>
+                        <p>Clique no título de qualquer coluna pra ordenar por ela (ex: por Qtd em Estoque, pra ver os maiores saldos primeiro).</p>
+                        <p>Útil pra achar estoque parado de uma colheita antiga, ou conferir de qual data saiu determinado lote.</p>
+                        <p><b>Parceiro</b> e <b>Produto</b> filtram (pode marcar vários); <b>De/Até</b> filtra pela data da colheita, com atalhos de 7 dias/30 dias/Tudo.</p>
+                    </div>
+                </details>
+
+                <details class="ajuda-sec">
+                    <summary><i data-lucide="arrow-left-right" class="w-4 h-4 text-brand-600 shrink-0"></i> Aba Histórico</summary>
                     <div class="ajuda-sec-body">
                         <p>Linha do tempo de tudo que aconteceu: entregas registradas, lotes processados e baixas — em ordem, com hora. Os botões em cima filtram por período (hoje, 7 dias, etc.). Bom pra auditar o dia.</p>
                     </div>
@@ -1746,15 +1854,16 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         const PAGINAS_INFO = {
             inicio: { titulo: 'Resumo & Estoque', subtitulo: 'Acompanhamento em tempo real do estoque' },
             estoque: { titulo: 'Entregas', subtitulo: 'Lance parceiro, colheita e caixas, depois os lotes processados' },
-            baixas: { titulo: 'Baixas', subtitulo: 'Histórico completo de saídas de estoque — funciona como checklist de embarque por destino' },
-            movimentacoes: { titulo: 'Movimentações', subtitulo: 'Linha do tempo de entregas, lotes e baixas' },
+            baixas: { titulo: 'Rastreamento', subtitulo: 'Histórico completo de saídas de estoque — funciona como checklist de embarque por destino' },
+            lotes: { titulo: 'Lotes em Estoque', subtitulo: 'O que ainda tem em mãos, por data da colheita, parceiro e produto' },
+            movimentacoes: { titulo: 'Histórico', subtitulo: 'Linha do tempo de entregas, lotes e baixas' },
             desempenho: { titulo: 'Desempenho', subtitulo: 'Produtividade de cada colaborador — quem faz mais caixas e mais rápido' },
             relatorios: { titulo: 'Relatórios', subtitulo: 'Filtra e exporta o resumo de entregas por período' }
         };
 
         function switchPage(pagina) {
             paginaAtiva = pagina;
-            ['inicio', 'estoque', 'baixas', 'movimentacoes', 'desempenho', 'relatorios'].forEach(p => {
+            ['inicio', 'estoque', 'baixas', 'lotes', 'movimentacoes', 'desempenho', 'relatorios'].forEach(p => {
                 document.getElementById('page' + capitalize(p)).classList.toggle('hidden', p !== pagina);
             });
             document.querySelectorAll('#appSidebarNav button').forEach(btn => {
@@ -1779,6 +1888,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             if (pagina === 'relatorios') openRelatoriosPage();
             if (pagina === 'movimentacoes') renderMovimentacoesPage();
             if (pagina === 'desempenho') openDesempenhoPage();
+            if (pagina === 'lotes') renderLotesPage();
 
             lucide.createIcons();
         }
@@ -1882,6 +1992,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 populateMsFiltros('baixas');
                 populateMsFiltros('inicio');
                 populateMsFiltros('desempenho');
+                populateMsFiltros('lotes');
                 if (estoqueLoaded) {
                     populateEstoqueSelects();
                     renderInicioPage();
@@ -2416,6 +2527,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             if (!colaborador) return showMessageModal('Atenção', 'Selecione o colaborador que pegou as caixas.', 'error');
             if (!caixas || caixas <= 0) return showMessageModal('Atenção', 'Informe quantas caixas ele pegou.', 'error');
+
+            // Não deixa pegar mais caixas do que realmente sobrou pra processar
+            // nessa entrega (entregues − processado − em proc. − perdido) — sem
+            // isso dava pra registrar retirada de caixa que não existe mais.
+            const pendenteDisponivel = totalsForCard(card).pendente;
+            if (caixas > pendenteDisponivel) {
+                return showMessageModal('Atenção', `Essa entrega só tem ${pendenteDisponivel} cx não processada${pendenteDisponivel !== 1 ? 's' : ''} — não dá pra pegar ${caixas}.`, 'error');
+            }
+
             if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
 
             try {
@@ -2623,9 +2743,6 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const horarioValue = document.getElementById('fecharAlocHorario').value;
             const fechadaEm = horarioValue ? new Date(horarioValue) : new Date();
             if (isNaN(fechadaEm.getTime())) return showMessageModal('Atenção', 'Horário de finalização inválido.', 'error');
-            if (fechadaEm < aloc.criadoDate) {
-                return showMessageModal('Atenção', `O horário de finalização não pode ser antes de quando ${aloc.colaborador} pegou as caixas (${aloc.criadoDate.toLocaleString('pt-BR')}).`, 'error');
-            }
 
             const informadasProduto = linhas.reduce((s, l) => s + l.quantidade, 0);
             const informadas = informadasProduto + perdaQuantidade;
@@ -2754,9 +2871,22 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const lote = card.lotes.find(l => l.id === loteId);
             if (!lote) return;
 
+            // Se esse é o ÚLTIMO lote de produto ligado à retirada que o
+            // originou, apagá-lo desfaz o fechamento inteiro daquela retirada
+            // — inclusive qualquer perda declarada nela. Sem isso, a retirada
+            // ficava "fechada" sem nenhum produto nem perda associado (um
+            // "perdido" fantasma que nunca some, mesmo apagando o lote).
+            const aloc = lote.alocacaoId ? card.alocacoes.find(a => a.id === lote.alocacaoId) : null;
+            const ehUltimoLoteDaRetirada = !!aloc && card.lotes.filter(l => l.alocacaoId === lote.alocacaoId).length === 1;
+            const vaiReabrirRetirada = ehUltimoLoteDaRetirada && aloc.status === 'fechada';
+
+            const avisoReabertura = vaiReabrirRetirada
+                ? ` Essa era a última caixa de produto da retirada de ${aloc.colaborador} — ela volta para "em processamento"${aloc.perdaQuantidade > 0 ? ' (e a perda registrada nela é zerada)' : ''}.`
+                : '';
+
             const confirmed = await showConfirmActionModal(
                 `Excluir esse lote?`,
-                `${lote.produto}: ${lote.quantidade} caixas${lote.colaborador ? `, ${lote.colaborador}` : ''}. Essa ação não pode ser desfeita.`
+                `${lote.produto}: ${lote.quantidade} caixas${lote.colaborador ? `, ${lote.colaborador}` : ''}. Essa ação não pode ser desfeita.${avisoReabertura}`
             );
             if (!confirmed) return;
             if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
@@ -2766,6 +2896,22 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 if (error) throw error;
 
                 card.lotes = card.lotes.filter(l => l.id !== loteId);
+
+                if (vaiReabrirRetirada) {
+                    const { error: alocErr } = await db.from('alocacoes').update({
+                        status: 'aberta',
+                        fechada_em: null,
+                        perda_quantidade: 0,
+                        perda_motivo: null
+                    }).eq('id', aloc.id);
+                    if (alocErr) throw alocErr;
+                    aloc.status = 'aberta';
+                    aloc.fechadaDate = null;
+                    aloc.perdaQuantidade = 0;
+                    aloc.perdaMotivo = '';
+                    card.expanded = true;
+                }
+
                 renderParceiroCards();
             } catch (err) {
                 console.error('Erro ao excluir lote:', err);
@@ -3097,8 +3243,13 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     </button>
                 </div>`).join('');
 
-            // Mini-form pra registrar uma nova retirada (só quando não concluída).
-            const retiradaFormHtml = card.concluido ? '' : `
+            // Mini-form pra registrar uma nova retirada — só quando não concluída
+            // E ainda sobra caixa "não processada" pra pegar (t.pendente > 0).
+            // Sem isso, dava pra registrar retirada de caixa que não existe mais
+            // (ex: entrega toda já processada/perdida, mas o form continuava
+            // aberto convidando a pegar mais).
+            const temCaixaDisponivel = t.pendente > 0;
+            const retiradaFormHtml = (card.concluido || !temCaixaDisponivel) ? '' : `
                 <div class="rounded-lg bg-slate-50 border border-slate-200 p-2.5 mt-2">
                     <span class="text-[10px] font-black uppercase tracking-wide text-slate-500 flex items-center gap-1 mb-1.5">
                         <i data-lucide="hand" class="w-3 h-3"></i> Registrar quem pegou caixas
@@ -3115,10 +3266,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     </div>
                 </div>`;
 
-            const emProcSectionHtml = (abertas.length || !card.concluido) ? `
+            // A seção inteira ("Em processamento") só aparece se tiver algo pra
+            // mostrar: alguma retirada em aberto, OU (não concluída e ainda com
+            // caixa disponível pra pegar). Entrega toda processada/perdida e sem
+            // ninguém no meio do processo não precisa mais dessa seção.
+            const emProcSectionHtml = (abertas.length > 0 || (!card.concluido && temCaixaDisponivel)) ? `
                 <div class="mb-3">
                     <span class="text-[10px] font-black uppercase tracking-wide text-slate-500 block mb-1.5">Em processamento</span>
-                    ${abertas.length ? `<div class="space-y-1.5">${abertasRowsHtml}</div>` : (card.concluido ? '' : '<div class="text-[11px] text-slate-400 italic px-1 pb-0.5">Ninguém pegou caixas ainda.</div>')}
+                    ${abertas.length ? `<div class="space-y-1.5">${abertasRowsHtml}</div>` : '<div class="text-[11px] text-slate-400 italic px-1 pb-0.5">Ninguém pegou caixas ainda.</div>'}
                     ${retiradaFormHtml}
                 </div>` : '';
 
@@ -3824,7 +3979,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         // dele (o painel do Relatórios tem seu próprio listener mais abaixo).
         document.addEventListener('click', event => {
             if (event.target.closest('.multiselect')) return;
-            document.querySelectorAll('[id^="baixasFiltro"][id$="Panel"], [id^="inicioFiltro"][id$="Panel"], [id^="desempenhoFiltro"][id$="Panel"], #baixaEstoqueParceirosPanel').forEach(panel => panel.classList.add('hidden'));
+            document.querySelectorAll('[id^="baixasFiltro"][id$="Panel"], [id^="inicioFiltro"][id$="Panel"], [id^="desempenhoFiltro"][id$="Panel"], [id^="lotesFiltro"][id$="Panel"], #baixaEstoqueParceirosPanel').forEach(panel => panel.classList.add('hidden'));
         });
 
         registerMsFiltro('baixas',
@@ -3839,6 +3994,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             { produto: 'produtos', colaborador: 'colaboradores' },
             { produto: 'Todos os produtos', colaborador: 'Todos os colaboradores' },
             () => renderDesempenhoPage());
+        registerMsFiltro('lotes',
+            { parceiro: 'produtores', produto: 'produtos' },
+            { parceiro: 'Todos', produto: 'Todos' },
+            () => renderLotesPage());
 
         // Preenche as opções de Parceiro/Produto/Colaborador com os cadastros —
         // chamado ao abrir o resumo e sempre que os cadastros mudam.
@@ -4546,6 +4705,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 populateEstoqueSelects();
                 populateMsFiltros('baixas');
                 populateMsFiltros('inicio');
+                populateMsFiltros('lotes');
                 renderInicioPage();
             } catch (err) {
                 console.error('Erro ao carregar estoque:', err);
@@ -4865,10 +5025,11 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 });
             }
 
-            // O histórico de baixas mora numa página própria (Baixas) — ver
-            // renderBaixasHistorico(), chamada aqui embaixo pra manter os dois
-            // sempre em sincronia com as mesmas fontes de dados.
+            // O histórico de baixas e os lotes em estoque moram em páginas
+            // próprias (Baixas / Lotes em Estoque) — chamadas aqui embaixo pra
+            // manter as três sempre em sincronia com as mesmas fontes de dados.
             renderBaixasHistorico();
+            renderLotesPage();
             // Chamado aqui também (não só dentro de renderBaixasHistorico) pra não
             // depender de um caminho interno dela sempre converter os ícones dessa
             // página inteira — um retorno antecipado esquecido lá já deixou todo
@@ -4909,56 +5070,63 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             // Hora exata do registro (não só a data) — ajuda a rastrear a ordem real
             // de embarque no dia, não só "saiu hoje".
             const horaTexto = s => s.createdAt ? new Date(s.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-            // Cada campo (produto/parceiro/destino/rastreio/observação) vira uma
-            // "coluna" com um rotulinho em cima do valor — mas só na PRIMEIRA linha
-            // da lista inteira (ver "primeiraLinha" abaixo); repetir o rótulo em
-            // toda linha empilhava um monte de "Produto/Parceiro/Destino..." igual,
-            // poluindo a lista. Da segunda linha em diante já dá pra reconhecer o
-            // que é o quê pela posição/cor do pill.
-            const campo = (mostrarLabel, label, valorHtml) => mostrarLabel
-                ? `<span class="inline-flex flex-col items-start leading-none gap-0.5">
-                        <span class="text-[8px] font-black uppercase tracking-widest text-slate-400">${label}</span>
-                        ${valorHtml}
-                    </span>`
-                : valorHtml;
-            // Parceiro/destino/rastreio viram pills na linha principal — pra ler como
-            // frase completa: "5 cx de Filetado [Fazenda Oásis] [Doce Mel] [#12]",
-            // igual um item de checklist de embarque. mostrarDestino/mostrarRastreio
-            // ficam off quando esse já é o eixo do agrupamento (vira o título do
-            // grupo — repetir na linha seria redundante).
-            const itemHtml = (s, mostrarDestino, mostrarRastreio, mostrarLabels) => `
-                <div class="summary-row items-start gap-3.5">
-                    <div class="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0 mt-0.5">
-                        <i data-lucide="minus-circle" class="w-4 h-4"></i>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-bold text-slate-700 flex flex-wrap items-end gap-3">
-                            ${campo(mostrarLabels, 'Produto', `<span>${escapeHtml(s.produto)} <span class="text-slate-400 font-semibold">— ${s.quantidade} cx</span></span>`)}
-                            ${s.produtor ? campo(mostrarLabels, 'Parceiro', `<span class="stat-pill bg-slate-100 text-slate-600">${escapeHtml(s.produtor)}</span>`) : ''}
-                            ${mostrarDestino ? campo(mostrarLabels, 'Destino', s.destino ? `<span class="stat-pill bg-brand-50 text-brand-700">${escapeHtml(s.destino)}</span>` : '<span class="stat-pill bg-amber-50 text-amber-700">Sem destino</span>') : ''}
-                            ${mostrarRastreio && s.rastreioNumero ? campo(mostrarLabels, 'Rastreio', `<span class="stat-pill bg-indigo-50 text-indigo-700">#${s.rastreioNumero}${s.identificacao ? ` · ${escapeHtml(s.identificacao)}` : ''}</span>`) : ''}
-                            ${s.observacao ? campo(mostrarLabels, 'Obs.', `<span class="stat-pill bg-slate-50 text-slate-500">${escapeHtml(s.observacao)}</span>`) : ''}
-                        </p>
-                        <p class="text-xs text-slate-400 font-medium mt-1.5">${isoDateToBR(s.data)}${horaTexto(s) ? ` · ${horaTexto(s)}` : ''}${s.loteData ? ` · lote ${isoDateToBR(s.loteData)}` : ''}</p>
-                    </div>
-                    <div class="flex items-center gap-1.5 shrink-0">
-                        <button type="button" onclick="openEditSaidaModal('${s.id}')" class="cadastro-badge-icon-btn !w-7 !h-7" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                        <button type="button" onclick="excluirSaidaEstoque('${s.id}')" class="cadastro-badge-icon-btn cadastro-badge-icon-btn-danger !w-7 !h-7" title="Excluir"><i data-lucide="x" class="w-4 h-4"></i></button>
-                    </div>
-                </div>
+            // Tabela de verdade (thead + colunas fixas) em vez de pills soltos com
+            // rótulo por cima — só uma tabela garante que "Produto" fique de fato
+            // em cima da coluna do produto, "Parceiro" em cima da do parceiro etc.
+            // mostrarDestino/mostrarRastreio somem a coluna quando esse já é o eixo
+            // do agrupamento (vira o título do grupo — repetir seria redundante).
+            const numColunas = (mostrarDestino, mostrarRastreio) => 5 + (mostrarDestino ? 1 : 0) + (mostrarRastreio ? 1 : 0);
+            const theadHtml = (mostrarDestino, mostrarRastreio) => `
+                <thead><tr>
+                    <th>Produto</th>
+                    <th class="num">Quantidade</th>
+                    <th>Parceiro</th>
+                    ${mostrarDestino ? '<th>Destino</th>' : ''}
+                    ${mostrarRastreio ? '<th>Rastreio</th>' : ''}
+                    <th>Detalhes</th>
+                    <th></th>
+                </tr></thead>
             `;
-            // true só na primeira linha renderizada (de toda a lista, mesmo
-            // atravessando grupos) — muda pra false no primeiro uso e nunca mais volta.
-            let primeiraLinha = true;
-            const itemHtmlComLabelUmaVez = (s, mostrarDestino, mostrarRastreio) => {
-                const html = itemHtml(s, mostrarDestino, mostrarRastreio, primeiraLinha);
-                primeiraLinha = false;
-                return html;
-            };
+            const itemRowHtml = (s, mostrarDestino, mostrarRastreio) => `
+                <tr>
+                    <td class="font-bold text-slate-700">
+                        ${escapeHtml(s.produto)}
+                        <div class="text-[11px] text-slate-400 font-medium mt-0.5">${isoDateToBR(s.data)}${horaTexto(s) ? ` · ${horaTexto(s)}` : ''}${s.loteData ? ` · lote ${isoDateToBR(s.loteData)}` : ''}</div>
+                    </td>
+                    <td class="num font-black text-slate-700">${s.quantidade} cx</td>
+                    <td>${s.produtor ? `<span class="stat-pill bg-slate-100 text-slate-600">${escapeHtml(s.produtor)}</span>` : '<span class="muted">—</span>'}</td>
+                    ${mostrarDestino ? `<td>${s.destino ? `<span class="stat-pill bg-brand-50 text-brand-700">${escapeHtml(s.destino)}</span>` : '<span class="stat-pill bg-amber-50 text-amber-700">Sem destino</span>'}</td>` : ''}
+                    ${mostrarRastreio ? `<td>${s.rastreioNumero ? `<span class="stat-pill bg-indigo-50 text-indigo-700">#${s.rastreioNumero}${s.identificacao ? ` · ${escapeHtml(s.identificacao)}` : ''}</span>` : '<span class="muted">—</span>'}</td>` : ''}
+                    <td class="muted">${s.observacao ? escapeHtml(s.observacao) : '—'}</td>
+                    <td class="num">
+                        <div class="flex items-center gap-1.5 justify-end">
+                            <button type="button" onclick="openEditSaidaModal('${s.id}')" class="cadastro-badge-icon-btn !w-7 !h-7" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                            <button type="button" onclick="excluirSaidaEstoque('${s.id}')" class="cadastro-badge-icon-btn cadastro-badge-icon-btn-danger !w-7 !h-7" title="Excluir"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            // Linha de seção (grupo) — mesmo estilo de section-row já usado na
+            // tabela de saldo do Início, span na largura toda via colspan.
+            const grupoRowHtml = (colspan, tituloClass, titulo, subtitulo, total) => `
+                <tr class="section-row"><td colspan="${colspan}">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span>
+                            <span class="text-xs font-black uppercase tracking-widest ${tituloClass}">${titulo}</span>
+                            ${subtitulo ? `<span class="text-[11px] text-slate-400 font-semibold normal-case ml-2">${subtitulo}</span>` : ''}
+                        </span>
+                        <span class="text-xs font-bold text-slate-400 normal-case">${total} cx no total</span>
+                    </div>
+                </td></tr>
+            `;
+
+            let bodyHtml, mostrarDestino, mostrarRastreio;
 
             if (!agrupamento) {
-                historicoEl.innerHTML = saidasFiltradas.map(s => itemHtmlComLabelUmaVez(s, true, true)).join('');
+                mostrarDestino = true; mostrarRastreio = true;
+                bodyHtml = saidasFiltradas.map(s => itemRowHtml(s, true, true)).join('');
             } else if (agrupamento === 'destino') {
+                mostrarDestino = false; mostrarRastreio = true;
                 // Um grupo por destino — vira um checklist de embarque (tudo que
                 // saiu pra cada lugar, junto, com o total de caixas). "Sem destino"
                 // sempre por último, pra chamar atenção pras baixas que ainda
@@ -4976,14 +5144,12 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     return totalDoGrupo(b[1]) - totalDoGrupo(a[1]);
                 });
 
-                historicoEl.innerHTML = grupos.map(([destino, itens]) => `
-                    <div class="px-4 pt-4 pb-2 bg-slate-50 flex items-center justify-between gap-2">
-                        <span class="text-xs font-black uppercase tracking-widest ${destino ? 'text-slate-400' : 'text-amber-600'}">${destino ? escapeHtml(destino) : 'Sem destino definido'}</span>
-                        <span class="text-xs font-bold text-slate-400">${totalDoGrupo(itens)} cx no total</span>
-                    </div>
-                    ${itens.map(s => itemHtmlComLabelUmaVez(s, false, true)).join('')}
-                `).join('');
+                bodyHtml = grupos.map(([destino, itens]) =>
+                    grupoRowHtml(numColunas(mostrarDestino, mostrarRastreio), destino ? 'text-slate-500' : 'text-amber-600', destino ? escapeHtml(destino) : 'Sem destino definido', '', totalDoGrupo(itens))
+                    + itens.map(s => itemRowHtml(s, false, true)).join('')
+                ).join('');
             } else {
+                mostrarDestino = true; mostrarRastreio = false;
                 // Agrupar por rastreio (número de embarque) — junta baixas de
                 // produtos/parceiros diferentes que saíram juntas no mesmo
                 // embarque. "Sem rastreio" sempre por último.
@@ -5000,21 +5166,16 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     return Number(b[0]) - Number(a[0]);
                 });
 
-                historicoEl.innerHTML = grupos.map(([chave, itens]) => {
+                bodyHtml = grupos.map(([chave, itens]) => {
                     const destinos = [...new Set(itens.map(i => i.destino).filter(Boolean))];
                     const identificacao = itens.map(i => i.identificacao).find(Boolean);
-                    return `
-                        <div class="px-4 pt-4 pb-2 bg-slate-50">
-                            <div class="flex items-center justify-between gap-2">
-                                <span class="text-xs font-black uppercase tracking-widest ${chave ? 'text-indigo-600' : 'text-amber-600'}">${chave ? `Rastreio #${chave}${identificacao ? ` — ${escapeHtml(identificacao)}` : ''}` : 'Sem rastreio'}</span>
-                                <span class="text-xs font-bold text-slate-400">${totalDoGrupo(itens)} cx no total</span>
-                            </div>
-                            ${destinos.length ? `<span class="text-[11px] text-slate-400 font-semibold">→ ${destinos.map(d => escapeHtml(d)).join(', ')}</span>` : ''}
-                        </div>
-                        ${itens.map(s => itemHtmlComLabelUmaVez(s, true, false)).join('')}
-                    `;
+                    const subtitulo = destinos.length ? `→ ${destinos.map(d => escapeHtml(d)).join(', ')}` : '';
+                    return grupoRowHtml(numColunas(mostrarDestino, mostrarRastreio), chave ? 'text-indigo-600' : 'text-amber-600', chave ? `Rastreio #${chave}${identificacao ? ` — ${escapeHtml(identificacao)}` : ''}` : 'Sem rastreio', subtitulo, totalDoGrupo(itens))
+                        + itens.map(s => itemRowHtml(s, true, false)).join('');
                 }).join('');
             }
+
+            historicoEl.innerHTML = `<table class="report-table">${theadHtml(mostrarDestino, mostrarRastreio)}<tbody>${bodyHtml}</tbody></table>`;
 
             renderBaixaEstoqueQtdRows();
             lucide.createIcons();
@@ -5056,6 +5217,171 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             if (estoqueParceirosColapsados.has(produtor)) estoqueParceirosColapsados.delete(produtor);
             else estoqueParceirosColapsados.add(produtor);
             renderInicioPage();
+        }
+
+        // =====================================================================
+        // LOTES EM ESTOQUE — consulta "o que ainda tem em mãos", quebrado por
+        // Data da colheita -> Parceiro -> Produto -> Qtd em estoque. Não lança
+        // nada; reaproveita computeEstoqueSaldo (quem produziu o quê) +
+        // computeEstoqueDetalhePorData (a quebra por lote/data, já usada no
+        // fluxo de dar baixa pra escolher de qual lote sai) — aqui só junta
+        // tudo numa tabela de consulta.
+        // =====================================================================
+        function buildLotesRows() {
+            const saldoMap = computeEstoqueSaldo();
+            const rows = [];
+            saldoMap.forEach(entry => {
+                if (entry.produzido <= 0) return;
+                computeEstoqueDetalhePorData(entry.produtor, entry.produto).forEach(d => {
+                    if (d.restante > 0) rows.push({ data: d.data, produtor: entry.produtor, produto: entry.produto, restante: d.restante });
+                });
+            });
+            return rows;
+        }
+
+        function setLotesQuickFilter(kind) {
+            const hoje = new Date();
+            const inicioInput = document.getElementById('lotesDataInicio');
+            const fimInput = document.getElementById('lotesDataFim');
+            if (kind === 'tudo') {
+                inicioInput.value = '';
+                fimInput.value = '';
+            } else if (kind === '7dias') {
+                const inicio = new Date(hoje); inicio.setDate(inicio.getDate() - 6);
+                inicioInput.value = dateToInputValue(inicio);
+                fimInput.value = dateToInputValue(hoje);
+            } else if (kind === '30dias') {
+                const inicio = new Date(hoje); inicio.setDate(inicio.getDate() - 29);
+                inicioInput.value = dateToInputValue(inicio);
+                fimInput.value = dateToInputValue(hoje);
+            }
+            renderLotesPage();
+        }
+
+        function limparFiltrosLotes() {
+            document.getElementById('lotesDataInicio').value = '';
+            document.getElementById('lotesDataFim').value = '';
+            limparMsFiltros('lotes');
+        }
+
+        // Ordenação da tabela plana (clique no título de qualquer coluna) —
+        // mesmo padrão do Ranking geral em Desempenho (thSort/setDesempenhoSort).
+        let lotesSort = { col: 'data', dir: 'desc' };
+
+        function setLotesSort(col) {
+            if (lotesSort.col === col) lotesSort.dir = lotesSort.dir === 'asc' ? 'desc' : 'asc';
+            else lotesSort = { col, dir: col === 'restante' ? 'desc' : 'asc' };
+            renderLotesPage();
+        }
+
+        function ordenarLotes(rows) {
+            const { col, dir } = lotesSort;
+            const mult = dir === 'asc' ? 1 : -1;
+            const raw = r => {
+                switch (col) {
+                    case 'data': return r.data;
+                    case 'produtor': return r.produtor.toLowerCase();
+                    case 'produto': return r.produto.toLowerCase();
+                    case 'restante': return r.restante;
+                    default: return null;
+                }
+            };
+            return rows.slice().sort((a, b) => {
+                const va = raw(a), vb = raw(b);
+                if (va < vb) return -mult;
+                if (va > vb) return mult;
+                // Empate: data (mais recente primeiro) -> parceiro -> produto,
+                // pra ordem sempre estável em vez de embaralhar a cada render.
+                if (a.data !== b.data) return b.data.localeCompare(a.data);
+                if (a.produtor !== b.produtor) return a.produtor.localeCompare(b.produtor);
+                return a.produto.localeCompare(b.produto);
+            });
+        }
+
+        function renderLotesPage() {
+            const tableEl = document.getElementById('lotesTable');
+            if (!tableEl) return;
+
+            const parceiroSet = msFiltros.lotes.parceiro;
+            const produtoSet = msFiltros.lotes.produto;
+            const dataInicio = document.getElementById('lotesDataInicio')?.value || '';
+            const dataFim = document.getElementById('lotesDataFim')?.value || '';
+
+            const rows = buildLotesRows().filter(r => {
+                if (parceiroSet.size > 0 && !parceiroSet.has(r.produtor)) return false;
+                if (produtoSet.size > 0 && !produtoSet.has(r.produto)) return false;
+                if (dataInicio && r.data < dataInicio) return false;
+                if (dataFim && r.data > dataFim) return false;
+                return true;
+            });
+
+            const totalCx = rows.reduce((s, r) => s + r.restante, 0);
+            const parceirosAtivos = new Set(rows.map(r => r.produtor || '')).size;
+            const porProdutoTotal = new Map();
+            rows.forEach(r => porProdutoTotal.set(r.produto, (porProdutoTotal.get(r.produto) || 0) + r.restante));
+            document.getElementById('lotesKpis').innerHTML =
+                  kpiTileHtml('layers', 'bg-brand-50 text-brand-600', 'Lotes com saldo', String(rows.length))
+                + kpiTileHtml('boxes', 'bg-sky-50 text-sky-600', 'Total em caixas', `${totalCx} cx`)
+                + kpiTileHtml('users', 'bg-slate-100 text-slate-500', 'Parceiros', String(parceirosAtivos))
+                + kpiTileHtml('package', 'bg-slate-100 text-slate-500', 'Produtos', String(porProdutoTotal.size));
+
+            // Um KPI por produto (maior saldo primeiro) — mesma ideia do "Saldo
+            // por produto" do Início, só que já recortado pelos filtros dessa
+            // página (parceiro/produto/data da colheita).
+            const produtosOrdenados = [...porProdutoTotal.entries()].sort((a, b) => b[1] - a[1]);
+            const kpisPorProdutoWrapper = document.getElementById('lotesKpisPorProdutoWrapper');
+            const kpisPorProdutoEl = document.getElementById('lotesKpisPorProduto');
+            if (kpisPorProdutoWrapper) kpisPorProdutoWrapper.classList.toggle('hidden', produtosOrdenados.length === 0);
+            if (kpisPorProdutoEl) {
+                kpisPorProdutoEl.innerHTML = produtosOrdenados
+                    .map(([produto, total]) => kpiTileHtml('package', 'bg-brand-50 text-brand-600', escapeHtml(produto), `${total} cx`))
+                    .join('');
+            }
+
+            if (rows.length === 0) {
+                tableEl.innerHTML = '<div class="summary-row"><span class="text-xs text-slate-400 italic">Nenhum lote com saldo em aberto pros filtros aplicados</span></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            // Tabela plana (uma linha por data+parceiro+produto), com título de
+            // coluna clicável pra ordenar — em vez do agrupamento em 3 níveis de
+            // antes, mais fácil de escanear numa lista grande.
+            const thSort = (col, label, num) => {
+                const active = lotesSort.col === col;
+                const arrow = active ? (lotesSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+                return `<th class="${num ? 'num ' : ''}cursor-pointer select-none hover:text-brand-600 ${active ? 'text-brand-700' : ''}" onclick="setLotesSort('${col}')">${label}${arrow}</th>`;
+            };
+            const sorted = ordenarLotes(rows);
+
+            // data-label em cada célula: sem uso em telas normais (a tabela
+            // renderiza como sempre), mas é o que a media query no <style>
+            // usa (content: attr(data-label)) pra rotular cada valor quando a
+            // linha vira um cartão empilhado no celular.
+            tableEl.innerHTML = `
+                <table class="report-table">
+                    <thead><tr>
+                        ${thSort('data', 'Data da Colheita')}
+                        ${thSort('produtor', 'Parceiro')}
+                        ${thSort('produto', 'Produto')}
+                        ${thSort('restante', 'Qtd em Estoque', true)}
+                    </tr></thead>
+                    <tbody>
+                        ${sorted.map(r => `<tr>
+                            <td class="muted" data-label="Data da Colheita">${isoDateToBR(r.data)}</td>
+                            <td data-label="Parceiro">${r.produtor ? `<span class="stat-pill bg-slate-100 text-slate-600"><i data-lucide="user" class="w-3 h-3"></i>${escapeHtml(r.produtor)}</span>` : '<span class="italic text-slate-400 font-semibold text-xs">Sem parceiro</span>'}</td>
+                            <td data-label="Produto"><span class="stat-pill bg-brand-50 text-brand-700"><i data-lucide="package" class="w-3 h-3"></i>${escapeHtml(r.produto)}</span></td>
+                            <td class="num font-black text-slate-800" data-label="Qtd em Estoque">${r.restante} cx</td>
+                        </tr>`).join('')}
+                    </tbody>
+                    <tfoot><tr><td colspan="3">Total (filtrado)</td><td class="num" data-label="Total (filtrado)">${totalCx} cx</td></tr></tfoot>
+                </table>
+            `;
+
+            const sortMobileSelect = document.getElementById('lotesSortMobile');
+            if (sortMobileSelect) sortMobileSelect.value = lotesSort.col;
+
+            lucide.createIcons();
         }
 
         // =====================================================================
@@ -5472,7 +5798,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const totalCaixas = linhas.reduce((s, l) => s + l.caixasProduto, 0);
             const totalTempoMs = linhas.reduce((s, l) => s + l.tempoTotalMs, 0);
             const totalRetiradas = linhas.reduce((s, l) => s + l.retiradasFechadas, 0);
-            const prodMedia = totalTempoMs > 0 ? totalCaixas / (totalTempoMs / 3600000) : null;
+            // A "Produtividade média" só pode somar as caixas de quem realmente
+            // tem tempo rastreado — misturar caixas SEM tempo associado (lote
+            // lançado sem passar por uma retirada, ou retirada fechada com
+            // horário de finalização igual/antes do "pegou", que zera a duração)
+            // no numerador, dividido só pelo tempo de quem TEM, inflava a conta
+            // pra um número sem sentido (ex: 10.000+ cx/h).
+            const linhasComTempo = linhas.filter(l => l.tempoTotalMs > 0);
+            const caixasComTempo = linhasComTempo.reduce((s, l) => s + l.caixasProduto, 0);
+            const prodMedia = totalTempoMs > 0 ? caixasComTempo / (totalTempoMs / 3600000) : null;
 
             document.getElementById('desempenhoKpis').innerHTML =
                   kpiTileHtml('users', 'bg-slate-100 text-slate-500', 'Colaboradores', String(linhas.length))
