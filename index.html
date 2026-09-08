@@ -997,11 +997,17 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <div id="historicoColabFiltroParceiroPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
                 </div>
             </div>
-            <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100">
+            <div class="flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
+                <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input type="checkbox" id="historicoColabOcultarNaoUsadas" checked onchange="renderHistoricoColaboradorPage()" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0">
+                    <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Ocultar caixas não usadas (sobras e perdidas)</span>
+                </label>
+                <button type="button" onclick="limparMsFiltros('historicoColab')" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline">Limpar filtros</button>
+            </div>
+            <div class="mt-2 pt-2 border-t border-slate-100">
                 <p class="text-[10px] text-slate-400 font-medium">
-                    Cada linha é um colaborador num dia. "Não usadas" = caixas que ele pegou e não viraram produto (perdidas/descartadas + sobra que voltou pra não processado). Horas trabalhadas contam só retiradas já fechadas (do "pegou" ao "fechou").
+                    Cada linha é um colaborador num dia. Com o filtro marcado (padrão), a tela mostra só o que ele produziu; desmarque pra ver a coluna <b>"Não usadas"</b> — as caixas que ele pegou e não viraram produto (<b>perdidas/descartadas</b> no fechamento + <b>sobra</b> que voltou pra não processado). Horas trabalhadas contam só retiradas já fechadas (do "pegou" ao "fechou").
                 </p>
-                <button type="button" onclick="limparMsFiltros('historicoColab')" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline shrink-0">Limpar filtros</button>
             </div>
         </div>
 
@@ -1793,7 +1799,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                             <li><b>Pegou</b> — total de caixas cruas que ele pegou pra processar naquele dia (soma das retiradas que ele iniciou no dia).</li>
                             <li><b>Virou produto</b> — caixas que ele fechou em produto nessas retiradas.</li>
                             <li><b>Produtos</b> — exatamente o que ele fez, quebrado por produto (ex: "Filetado 12cx · Brócolis 300g 5cx").</li>
-                            <li><b>Não usadas</b> — o que pegou e não virou produto: caixas perdidas/descartadas no fechamento <b>mais</b> a sobra que voltou pra "não processado".</li>
+                            <li><b>Não usadas</b> — o que pegou e não virou produto: caixas <b>perdidas/descartadas</b> no fechamento + <b>sobra</b> que só não foi informada e voltou pra "não processado". Fica <b>oculta por padrão</b> (filtro "Ocultar caixas não usadas" marcado) pra tela mostrar só o que foi produzido — desmarque pra ver a coluna e o total ocultado.</li>
                             <li><b>Horas trabalhadas</b> — tempo do "pegou" ao "fechou", somando só as retiradas já fechadas.</li>
                             <li><b>Retiradas</b> — quantas retiradas fechadas ele teve no dia.</li>
                         </ul>
@@ -6163,6 +6169,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 const k = colaborador + '|||' + dia;
                 if (!map.has(k)) map.set(k, {
                     colaborador, dia, pegou: 0, virouProduto: 0, naoUsadas: 0,
+                    perdidas: 0, sobra: 0,
                     tempoMs: 0, retiradas: 0, retiradasAbertas: 0, caixasEmAberto: 0,
                     porProduto: new Map()
                 });
@@ -6181,7 +6188,13 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 row.pegou += a.caixas;
                 if (a.status === 'fechada') {
                     row.retiradas += 1;
-                    row.naoUsadas += Math.max(0, a.caixas - (produtoTotalPorAloc.get(a.id) || 0));
+                    // pegou = produto + perda + sobra. "perda" é o que foi marcado
+                    // explicitamente como descartado no fechamento; "sobra" é o
+                    // resto que não foi informado e voltou pra "não processado".
+                    const perda = Math.max(0, a.perdaQuantidade || 0);
+                    const sobra = Math.max(0, a.caixas - (produtoTotalPorAloc.get(a.id) || 0) - perda);
+                    row.perdidas += perda;
+                    row.sobra += sobra;
                     if (a.fechadaDate && a.fechadaDate > a.criadoDate) row.tempoMs += (a.fechadaDate - a.criadoDate);
                     alocDestino.set(a.id, row);
                 } else {
@@ -6269,11 +6282,20 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             empty.classList.add('hidden');
             content.classList.remove('hidden');
 
+            // "Ocultar caixas não usadas" (marcado por padrão): esconde a coluna
+            // "Não usadas" (perdidas + sobra) por completo, deixando a tela só com
+            // o que o colaborador produziu. Desmarcado, a coluna volta.
+            const mostrarNaoUsadas = !document.getElementById('historicoColabOcultarNaoUsadas').checked;
+            linhas.forEach(l => { l.naoUsadas = l.perdidas + l.sobra; });
+
             const totPegou = linhas.reduce((s, l) => s + l.pegou, 0);
             const totProduto = linhas.reduce((s, l) => s + l.virouProduto, 0);
             const totNaoUsadas = linhas.reduce((s, l) => s + l.naoUsadas, 0);
+            const totPerdidas = linhas.reduce((s, l) => s + l.perdidas, 0);
+            const totSobra = linhas.reduce((s, l) => s + l.sobra, 0);
             const totTempoMs = linhas.reduce((s, l) => s + l.tempoMs, 0);
             const totEmAberto = linhas.reduce((s, l) => s + l.caixasEmAberto, 0);
+            const totRetiradas = linhas.reduce((s, l) => s + l.retiradas, 0);
 
             const porProdutoGeral = new Map();
             linhas.forEach(l => l.porProduto.forEach((q, prod) => porProdutoGeral.set(prod, (porProdutoGeral.get(prod) || 0) + q)));
@@ -6286,8 +6308,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             document.getElementById('historicoColabKpis').innerHTML =
                   kpiTileHtml('hand', 'bg-brand-50 text-brand-600', 'Caixas pegas', `${fmtInt(totPegou)} cx`)
                 + kpiTileHtml('package-check', 'bg-sky-50 text-sky-600', 'Viraram produto', `${fmtInt(totProduto)} cx`)
-                + kpiTileHtml('trash-2', 'bg-slate-100 text-slate-500', 'Não usadas', `${fmtInt(totNaoUsadas)} cx`)
+                + (mostrarNaoUsadas
+                    ? kpiTileHtml('trash-2', 'bg-slate-100 text-slate-500', 'Não usadas', `${fmtInt(totNaoUsadas)} cx`)
+                    : kpiTileHtml('list', 'bg-slate-100 text-slate-500', 'Retiradas', `${fmtInt(totRetiradas)}`))
                 + kpiTileHtml('timer', 'bg-slate-100 text-slate-500', 'Horas trabalhadas', fmtDuracao(totTempoMs));
+
+            if (!mostrarNaoUsadas && totNaoUsadas > 0) {
+                document.getElementById('historicoColabKpis').insertAdjacentHTML('beforeend',
+                    `<p class="col-span-2 sm:col-span-4 text-[10px] text-slate-400 font-medium -mt-1">${fmtInt(totNaoUsadas)} cx não usadas ocultas (${fmtInt(totPerdidas)} perdidas + ${fmtInt(totSobra)} sobra). Desmarque "Ocultar caixas não usadas" pra ver a coluna.</p>`);
+            }
 
             const thSort = (col, label, num) => {
                 const active = historicoColabSort.col === col;
@@ -6297,14 +6326,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             const rows = ordenarHistoricoColab(linhas);
             document.getElementById('historicoColabTabela').innerHTML = `
-                <table class="report-table" style="min-width:820px">
+                <table class="report-table" style="min-width:${mostrarNaoUsadas ? 820 : 740}px">
                     <thead><tr>
                         ${thSort('dia', 'Dia')}
                         ${thSort('colaborador', 'Colaborador')}
                         ${thSort('pegou', 'Pegou', true)}
                         ${thSort('virouProduto', 'Virou produto', true)}
                         <th>Produtos</th>
-                        ${thSort('naoUsadas', 'Não usadas', true)}
+                        ${mostrarNaoUsadas ? thSort('naoUsadas', 'Não usadas', true) : ''}
                         ${thSort('tempoMs', 'Horas trabalhadas', true)}
                         ${thSort('retiradas', 'Retiradas', true)}
                     </tr></thead>
@@ -6315,7 +6344,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                             <td class="num font-black text-slate-800">${fmtInt(r.pegou)} cx</td>
                             <td class="num text-brand-700 font-bold">${fmtInt(r.virouProduto)} cx</td>
                             <td class="muted">${fmtProdutos(r.porProduto)}</td>
-                            <td class="num ${r.naoUsadas > 0 ? 'text-red-600 font-bold' : 'muted'}">${r.naoUsadas > 0 ? fmtInt(r.naoUsadas) + ' cx' : '—'}</td>
+                            ${mostrarNaoUsadas ? `<td class="num ${r.naoUsadas > 0 ? 'text-red-600 font-bold' : 'muted'}">${r.naoUsadas > 0 ? fmtInt(r.naoUsadas) + ' cx' : '—'}</td>` : ''}
                             <td class="num">${fmtDuracao(r.tempoMs)}</td>
                             <td class="num muted">${r.retiradas || '—'}</td>
                         </tr>`).join('')}
@@ -6325,9 +6354,9 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                         <td class="num">${fmtInt(totPegou)} cx</td>
                         <td class="num">${fmtInt(totProduto)} cx</td>
                         <td>${fmtProdutos(porProdutoGeral)}</td>
-                        <td class="num">${fmtInt(totNaoUsadas)} cx</td>
+                        ${mostrarNaoUsadas ? `<td class="num">${fmtInt(totNaoUsadas)} cx</td>` : ''}
                         <td class="num">${fmtDuracao(totTempoMs)}</td>
-                        <td class="num">${fmtInt(linhas.reduce((s, l) => s + l.retiradas, 0))}</td>
+                        <td class="num">${fmtInt(totRetiradas)}</td>
                     </tr></tfoot>
                 </table>
             `;
