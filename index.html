@@ -394,6 +394,9 @@
                 <button type="button" onclick="switchPage('movimentacoes')" data-page="movimentacoes" title="Histórico">
                     <i data-lucide="arrow-left-right" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Histórico</span>
                 </button>
+                <button type="button" onclick="switchPage('historicoColaborador')" data-page="historicoColaborador" title="Histórico do Colaborador">
+                    <i data-lucide="clipboard-list" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Histórico do Colaborador</span>
+                </button>
                 <button type="button" onclick="switchPage('desempenho')" data-page="desempenho" title="Desempenho">
                     <i data-lucide="trophy" class="w-4 h-4 shrink-0"></i> <span class="sidebar-label">Desempenho</span>
                 </button>
@@ -948,6 +951,71 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Ranking geral — clique num título pra ordenar</span>
                     <div id="desempenhoRanking" class="rounded-xl border border-slate-200 overflow-x-auto"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PÁGINA: HISTÓRICO DO COLABORADOR (o que cada colaborador fez por dia) -->
+    <div id="pageHistoricoColaborador" class="hidden space-y-5">
+        <div class="rounded-xl border border-slate-200 p-3">
+            <div class="flex flex-wrap items-end gap-2">
+                <div>
+                    <label class="section-label">De</label>
+                    <input type="date" id="historicoColabDataInicio" onchange="renderHistoricoColaboradorPage()" class="p-2 border font-semibold text-xs">
+                </div>
+                <div>
+                    <label class="section-label">Até</label>
+                    <input type="date" id="historicoColabDataFim" onchange="renderHistoricoColaboradorPage()" class="p-2 border font-semibold text-xs">
+                </div>
+                <div class="flex gap-1.5 flex-wrap" id="historicoColabFiltros">
+                    <button type="button" onclick="setHistoricoColabQuickFilter('hoje')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Hoje</button>
+                    <button type="button" onclick="setHistoricoColabQuickFilter('ontem')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Ontem</button>
+                    <button type="button" onclick="setHistoricoColabQuickFilter('7dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">7 dias</button>
+                    <button type="button" onclick="setHistoricoColabQuickFilter('30dias')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">30 dias</button>
+                    <button type="button" onclick="setHistoricoColabQuickFilter('tudo')" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase">Tudo</button>
+                </div>
+                <button type="button" onclick="reloadHistoricoColaboradorData()" class="ml-auto text-[10px] font-bold text-brand-600 flex items-center gap-1 hover:text-brand-800 p-2">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Atualizar
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100">
+                <div class="multiselect relative">
+                    <label class="section-label">Colaborador</label>
+                    <button type="button" onclick="toggleMsFiltro('historicoColab','colaborador')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                        <span id="historicoColabFiltroColaboradorLabel" class="truncate">Todos os colaboradores</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                    </button>
+                    <div id="historicoColabFiltroColaboradorPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+                <div class="multiselect relative">
+                    <label class="section-label">Parceiro</label>
+                    <button type="button" onclick="toggleMsFiltro('historicoColab','parceiro')" class="w-full p-2 rounded-lg border-[1.5px] border-slate-300 bg-slate-50 text-xs font-semibold text-left flex items-center justify-between gap-2 hover:border-brand-400">
+                        <span id="historicoColabFiltroParceiroLabel" class="truncate">Todos os parceiros</span>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                    </button>
+                    <div id="historicoColabFiltroParceiroPanel" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100">
+                <p class="text-[10px] text-slate-400 font-medium">
+                    Cada linha é um colaborador num dia. "Não usadas" = caixas que ele pegou e não viraram produto (perdidas/descartadas + sobra que voltou pra não processado). Horas trabalhadas contam só retiradas já fechadas (do "pegou" ao "fechou").
+                </p>
+                <button type="button" onclick="limparMsFiltros('historicoColab')" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 underline shrink-0">Limpar filtros</button>
+            </div>
+        </div>
+
+        <div id="historicoColabLoading" class="text-center text-slate-400 text-xs italic py-10">Carregando histórico...</div>
+
+        <div id="historicoColabEmpty" class="hidden text-center text-slate-400 text-xs italic py-10">
+            Nenhum colaborador pegou caixas no período selecionado.
+        </div>
+
+        <div id="historicoColabContent" class="hidden space-y-5">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="historicoColabKpis"></div>
+            <div>
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Por dia e colaborador — clique num título pra ordenar</span>
+                <div id="historicoColabTabela" class="rounded-xl border border-slate-200 overflow-x-auto"></div>
             </div>
         </div>
     </div>
@@ -1718,6 +1786,22 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 </details>
 
                 <details class="ajuda-sec">
+                    <summary><i data-lucide="clipboard-list" class="w-4 h-4 text-brand-600 shrink-0"></i> Aba Histórico do Colaborador — o que cada um fez no dia</summary>
+                    <div class="ajuda-sec-body">
+                        <p>Uma linha por <b>colaborador</b> em cada <b>dia</b>, pra conferir rápido o trabalho de cada um. Filtre por período (De / Até ou os atalhos), por colaborador e por parceiro.</p>
+                        <ul>
+                            <li><b>Pegou</b> — total de caixas cruas que ele pegou pra processar naquele dia (soma das retiradas que ele iniciou no dia).</li>
+                            <li><b>Virou produto</b> — caixas que ele fechou em produto nessas retiradas.</li>
+                            <li><b>Produtos</b> — exatamente o que ele fez, quebrado por produto (ex: "Filetado 12cx · Brócolis 300g 5cx").</li>
+                            <li><b>Não usadas</b> — o que pegou e não virou produto: caixas perdidas/descartadas no fechamento <b>mais</b> a sobra que voltou pra "não processado".</li>
+                            <li><b>Horas trabalhadas</b> — tempo do "pegou" ao "fechou", somando só as retiradas já fechadas.</li>
+                            <li><b>Retiradas</b> — quantas retiradas fechadas ele teve no dia.</li>
+                        </ul>
+                        <p class="text-[11px] text-slate-400">Retiradas ainda abertas aparecem como aviso embaixo do nome ("N em aberto"), e as caixas delas só entram nas colunas depois que você fechar. Clique no título de qualquer coluna pra ordenar.</p>
+                    </div>
+                </details>
+
+                <details class="ajuda-sec">
                     <summary><i data-lucide="bar-chart-3" class="w-4 h-4 text-brand-600 shrink-0"></i> Aba Relatórios &amp; Compartilhar Resumo</summary>
                     <div class="ajuda-sec-body">
                         <h4>Filtros</h4>
@@ -1865,13 +1949,14 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             baixas: { titulo: 'Rastreamento', subtitulo: 'Histórico completo de saídas de estoque — funciona como checklist de embarque por destino' },
             lotes: { titulo: 'Lotes em Estoque', subtitulo: 'O que ainda tem em mãos, por data da colheita, parceiro e produto' },
             movimentacoes: { titulo: 'Histórico', subtitulo: 'Linha do tempo de entregas, lotes e baixas' },
+            historicoColaborador: { titulo: 'Histórico do Colaborador', subtitulo: 'O que cada colaborador fez por dia — caixas pegas, viradas em produto, não usadas e horas trabalhadas' },
             desempenho: { titulo: 'Desempenho', subtitulo: 'Produtividade de cada colaborador — quem faz mais caixas e mais rápido' },
             relatorios: { titulo: 'Relatórios', subtitulo: 'Filtra e exporta o resumo de entregas por período' }
         };
 
         function switchPage(pagina) {
             paginaAtiva = pagina;
-            ['inicio', 'estoque', 'baixas', 'lotes', 'movimentacoes', 'desempenho', 'relatorios'].forEach(p => {
+            ['inicio', 'estoque', 'baixas', 'lotes', 'movimentacoes', 'historicoColaborador', 'desempenho', 'relatorios'].forEach(p => {
                 document.getElementById('page' + capitalize(p)).classList.toggle('hidden', p !== pagina);
             });
             document.querySelectorAll('#appSidebarNav button').forEach(btn => {
@@ -1895,6 +1980,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             if (pagina === 'relatorios') openRelatoriosPage();
             if (pagina === 'movimentacoes') renderMovimentacoesPage();
+            if (pagina === 'historicoColaborador') openHistoricoColaboradorPage();
             if (pagina === 'desempenho') openDesempenhoPage();
             if (pagina === 'lotes') renderLotesPage();
 
@@ -2010,6 +2096,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 populateMsFiltros('inicio');
                 populateMsFiltros('desempenho');
                 populateMsFiltros('lotes');
+                populateMsFiltros('historicoColab');
                 if (estoqueLoaded) {
                     populateEstoqueSelects();
                     renderInicioPage();
@@ -3882,6 +3969,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     markResumoAtualizado();
                     renderMovimentacoesPage();
                     renderDesempenhoPage();
+                    renderHistoricoColaboradorPage();
                 })
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'processamentos' }, payload => {
                     const idx = allProcessamentos.findIndex(p => p.id === payload.new.id);
@@ -3891,6 +3979,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     markResumoAtualizado();
                     renderMovimentacoesPage();
                     renderDesempenhoPage();
+                    renderHistoricoColaboradorPage();
                 })
                 .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'processamentos' }, payload => {
                     allProcessamentos = allProcessamentos.filter(p => p.id !== payload.old.id);
@@ -3898,21 +3987,25 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     markResumoAtualizado();
                     renderMovimentacoesPage();
                     renderDesempenhoPage();
+                    renderHistoricoColaboradorPage();
                 })
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'alocacoes' }, payload => {
                     const m = mapAlocacaoRow(payload.new);
                     if (!allAlocacoes.some(a => a.id === m.id)) allAlocacoes.push(m);
                     renderDesempenhoPage();
+                    renderHistoricoColaboradorPage();
                 })
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'alocacoes' }, payload => {
                     const idx = allAlocacoes.findIndex(a => a.id === payload.new.id);
                     if (idx === -1) allAlocacoes.push(mapAlocacaoRow(payload.new));
                     else allAlocacoes[idx] = mapAlocacaoRow(payload.new);
                     renderDesempenhoPage();
+                    renderHistoricoColaboradorPage();
                 })
                 .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'alocacoes' }, payload => {
                     allAlocacoes = allAlocacoes.filter(a => a.id !== payload.old.id);
                     renderDesempenhoPage();
+                    renderHistoricoColaboradorPage();
                 })
                 .subscribe();
         }
@@ -4069,7 +4162,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         // dele (o painel do Relatórios tem seu próprio listener mais abaixo).
         document.addEventListener('click', event => {
             if (event.target.closest('.multiselect')) return;
-            document.querySelectorAll('[id^="baixasFiltro"][id$="Panel"], [id^="inicioFiltro"][id$="Panel"], [id^="desempenhoFiltro"][id$="Panel"], [id^="lotesFiltro"][id$="Panel"], #baixaEstoqueParceirosPanel').forEach(panel => panel.classList.add('hidden'));
+            document.querySelectorAll('[id^="baixasFiltro"][id$="Panel"], [id^="inicioFiltro"][id$="Panel"], [id^="desempenhoFiltro"][id$="Panel"], [id^="historicoColabFiltro"][id$="Panel"], [id^="lotesFiltro"][id$="Panel"], #baixaEstoqueParceirosPanel').forEach(panel => panel.classList.add('hidden'));
         });
 
         registerMsFiltro('baixas',
@@ -4088,6 +4181,10 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             { parceiro: 'produtores', produto: 'produtos' },
             { parceiro: 'Todos', produto: 'Todos' },
             () => renderLotesPage());
+        registerMsFiltro('historicoColab',
+            { colaborador: 'colaboradores', parceiro: 'produtores' },
+            { colaborador: 'Todos os colaboradores', parceiro: 'Todos os parceiros' },
+            () => renderHistoricoColaboradorPage());
 
         // Preenche as opções de Parceiro/Produto/Colaborador com os cadastros —
         // chamado ao abrir o resumo e sempre que os cadastros mudam.
@@ -5984,6 +6081,256 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                             </tr>`).join('')}
                     </tbody>
                 </table>`;
+
+            lucide.createIcons();
+        }
+
+        // =====================================================================
+        // HISTÓRICO DO COLABORADOR — o que cada colaborador fez por dia:
+        //   - Pegou: soma das caixas das retiradas que ele iniciou naquele dia.
+        //   - Virou produto: caixas de produto lançadas nas retiradas fechadas
+        //     dele (via alocacao_id), mais lotes soltos sem retirada.
+        //   - Não usadas: pegou − virou produto de cada retirada fechada
+        //     (perdidas/descartadas + sobra que voltou pra "não processado").
+        //   - Horas trabalhadas: (fechou − pegou), só retiradas já fechadas.
+        // Reaproveita allAlocacoes/allProcessamentos/allEntregas (já vivos).
+        // =====================================================================
+        let historicoColabSort = { col: 'dia', dir: 'desc' };
+        let historicoColabFilterInitialized = false;
+
+        function historicoColabRange() {
+            return {
+                inicio: document.getElementById('historicoColabDataInicio').value || null,
+                fim: document.getElementById('historicoColabDataFim').value || null
+            };
+        }
+
+        function setHistoricoColabQuickFilter(kind) {
+            const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+            const iniEl = document.getElementById('historicoColabDataInicio');
+            const fimEl = document.getElementById('historicoColabDataFim');
+            if (kind === 'tudo') { iniEl.value = ''; fimEl.value = ''; }
+            else if (kind === 'hoje') { iniEl.value = dateToInputValue(hoje); fimEl.value = dateToInputValue(hoje); }
+            else if (kind === 'ontem') {
+                const o = new Date(hoje); o.setDate(o.getDate() - 1);
+                iniEl.value = dateToInputValue(o); fimEl.value = dateToInputValue(o);
+            } else {
+                const dias = kind === '7dias' ? 6 : 29;
+                const ini = new Date(hoje); ini.setDate(ini.getDate() - dias);
+                iniEl.value = dateToInputValue(ini); fimEl.value = dateToInputValue(hoje);
+            }
+            renderHistoricoColaboradorPage();
+        }
+
+        async function reloadHistoricoColaboradorData() {
+            if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
+            try {
+                await loadEntregasEProcessamentos();
+                renderHistoricoColaboradorPage();
+            } catch (err) {
+                console.error('Erro ao atualizar histórico do colaborador:', err);
+                showMessageModal('Erro', 'Não foi possível atualizar os dados.', 'error');
+            }
+        }
+
+        function openHistoricoColaboradorPage() {
+            if (!historicoColabFilterInitialized) {
+                historicoColabFilterInitialized = true;
+                setHistoricoColabQuickFilter('7dias');
+            } else {
+                renderHistoricoColaboradorPage();
+            }
+        }
+
+        function computeHistoricoColaborador() {
+            const { inicio, fim } = historicoColabRange();
+            const fColab = (msFiltros.historicoColab && msFiltros.historicoColab.colaborador) || new Set();
+            const fParceiro = (msFiltros.historicoColab && msFiltros.historicoColab.parceiro) || new Set();
+            const okColab = c => fColab.size === 0 || fColab.has(c);
+            const okParceiro = p => fParceiro.size === 0 || fParceiro.has(p);
+
+            const produtorPorEntrega = new Map(allEntregas.map(e => [e.id, e.produtor || '']));
+
+            // Total de caixas de produto por alocação — só pra calcular "não usadas"
+            // (pegou − virou produto) de cada retirada fechada.
+            const produtoTotalPorAloc = new Map();
+            allProcessamentos.forEach(p => {
+                if (p.alocacaoId) produtoTotalPorAloc.set(p.alocacaoId, (produtoTotalPorAloc.get(p.alocacaoId) || 0) + p.quantidade);
+            });
+
+            const map = new Map();
+            const get = (colaborador, dia) => {
+                const k = colaborador + '|||' + dia;
+                if (!map.has(k)) map.set(k, {
+                    colaborador, dia, pegou: 0, virouProduto: 0, naoUsadas: 0,
+                    tempoMs: 0, retiradas: 0, retiradasAbertas: 0, caixasEmAberto: 0,
+                    porProduto: new Map()
+                });
+                return map.get(k);
+            };
+
+            // Passo 1 — retiradas: pegou / retiradas / tempo / não usadas / em aberto.
+            // Guarda pra qual linha (colaborador+dia) cada retirada fechada válida
+            // caiu, pra o passo 2 saber onde somar os produtos por alocacao_id.
+            const alocDestino = new Map();
+            allAlocacoes.forEach(a => {
+                if (!a.colaborador || !okColab(a.colaborador)) return;
+                if (!okParceiro(produtorPorEntrega.get(a.entregaId) || '')) return;
+                if (!dentroRangeData(a.criadoDate, inicio, fim)) return;
+                const row = get(a.colaborador, dateToInputValue(a.criadoDate));
+                row.pegou += a.caixas;
+                if (a.status === 'fechada') {
+                    row.retiradas += 1;
+                    row.naoUsadas += Math.max(0, a.caixas - (produtoTotalPorAloc.get(a.id) || 0));
+                    if (a.fechadaDate && a.fechadaDate > a.criadoDate) row.tempoMs += (a.fechadaDate - a.criadoDate);
+                    alocDestino.set(a.id, row);
+                } else {
+                    row.retiradasAbertas += 1;
+                    row.caixasEmAberto += a.caixas;
+                }
+            });
+
+            // Passo 2 — caixas de produto: coluna "virou produto" + detalhe por
+            // produto. Com alocacao_id, cai na retirada correspondente do passo 1;
+            // lotes soltos (sem retirada) entram por colaborador + dia do lançamento.
+            allProcessamentos.forEach(p => {
+                if (!p.produto) return;
+                let row;
+                if (p.alocacaoId) {
+                    row = alocDestino.get(p.alocacaoId);
+                } else {
+                    if (!p.colaborador || !okColab(p.colaborador)) return;
+                    if (!okParceiro(produtorPorEntrega.get(p.entregaId) || '')) return;
+                    if (!dentroRangeData(p.horaDate, inicio, fim)) return;
+                    row = get(p.colaborador, dateToInputValue(p.horaDate));
+                }
+                if (!row) return;
+                row.virouProduto += p.quantidade;
+                row.porProduto.set(p.produto, (row.porProduto.get(p.produto) || 0) + p.quantidade);
+            });
+
+            return [...map.values()];
+        }
+
+        function ordenarHistoricoColab(linhas) {
+            const { col, dir } = historicoColabSort;
+            const mult = dir === 'asc' ? 1 : -1;
+            const raw = r => {
+                switch (col) {
+                    case 'dia': return r.dia;
+                    case 'colaborador': return r.colaborador.toLowerCase();
+                    case 'pegou': return r.pegou;
+                    case 'virouProduto': return r.virouProduto;
+                    case 'naoUsadas': return r.naoUsadas;
+                    case 'tempoMs': return r.tempoMs;
+                    case 'retiradas': return r.retiradas;
+                    default: return null;
+                }
+            };
+            return linhas.slice().sort((a, b) => {
+                const va = raw(a), vb = raw(b);
+                if (va < vb) return -mult;
+                if (va > vb) return mult;
+                if (a.dia !== b.dia) return b.dia.localeCompare(a.dia);
+                return a.colaborador.localeCompare(b.colaborador);
+            });
+        }
+
+        function setHistoricoColabSort(col) {
+            if (historicoColabSort.col === col) historicoColabSort.dir = historicoColabSort.dir === 'asc' ? 'desc' : 'asc';
+            else historicoColabSort = { col, dir: col === 'colaborador' ? 'asc' : 'desc' };
+            renderHistoricoColaboradorPage();
+        }
+
+        function renderHistoricoColaboradorPage() {
+            const page = document.getElementById('pageHistoricoColaborador');
+            if (!page || page.classList.contains('hidden')) return;
+
+            const loading = document.getElementById('historicoColabLoading');
+            const empty = document.getElementById('historicoColabEmpty');
+            const content = document.getElementById('historicoColabContent');
+            loading.classList.add('hidden');
+
+            if (!isSupabaseConfigured) {
+                content.classList.add('hidden');
+                empty.classList.remove('hidden');
+                empty.textContent = 'Configure o Supabase para ver o histórico.';
+                return;
+            }
+
+            const linhas = computeHistoricoColaborador();
+
+            if (linhas.length === 0) {
+                content.classList.add('hidden');
+                empty.classList.remove('hidden');
+                empty.textContent = 'Nenhum colaborador pegou ou processou caixas no período selecionado.';
+                return;
+            }
+            empty.classList.add('hidden');
+            content.classList.remove('hidden');
+
+            const totPegou = linhas.reduce((s, l) => s + l.pegou, 0);
+            const totProduto = linhas.reduce((s, l) => s + l.virouProduto, 0);
+            const totNaoUsadas = linhas.reduce((s, l) => s + l.naoUsadas, 0);
+            const totTempoMs = linhas.reduce((s, l) => s + l.tempoMs, 0);
+            const totEmAberto = linhas.reduce((s, l) => s + l.caixasEmAberto, 0);
+
+            const porProdutoGeral = new Map();
+            linhas.forEach(l => l.porProduto.forEach((q, prod) => porProdutoGeral.set(prod, (porProdutoGeral.get(prod) || 0) + q)));
+
+            // "Filetado 12cx · Brócolis 300g 5cx" — maior primeiro; traço quando vazio.
+            const fmtProdutos = m => m.size === 0
+                ? '<span class="muted">—</span>'
+                : [...m.entries()].sort((a, b) => b[1] - a[1]).map(([prod, q]) => `${escapeHtml(prod)} ${fmtInt(q)}cx`).join(' · ');
+
+            document.getElementById('historicoColabKpis').innerHTML =
+                  kpiTileHtml('hand', 'bg-brand-50 text-brand-600', 'Caixas pegas', `${fmtInt(totPegou)} cx`)
+                + kpiTileHtml('package-check', 'bg-sky-50 text-sky-600', 'Viraram produto', `${fmtInt(totProduto)} cx`)
+                + kpiTileHtml('trash-2', 'bg-slate-100 text-slate-500', 'Não usadas', `${fmtInt(totNaoUsadas)} cx`)
+                + kpiTileHtml('timer', 'bg-slate-100 text-slate-500', 'Horas trabalhadas', fmtDuracao(totTempoMs));
+
+            const thSort = (col, label, num) => {
+                const active = historicoColabSort.col === col;
+                const arrow = active ? (historicoColabSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+                return `<th class="${num ? 'num ' : ''}cursor-pointer select-none hover:text-brand-600 ${active ? 'text-brand-700' : ''}" onclick="setHistoricoColabSort('${col}')">${label}${arrow}</th>`;
+            };
+
+            const rows = ordenarHistoricoColab(linhas);
+            document.getElementById('historicoColabTabela').innerHTML = `
+                <table class="report-table" style="min-width:820px">
+                    <thead><tr>
+                        ${thSort('dia', 'Dia')}
+                        ${thSort('colaborador', 'Colaborador')}
+                        ${thSort('pegou', 'Pegou', true)}
+                        ${thSort('virouProduto', 'Virou produto', true)}
+                        <th>Produtos</th>
+                        ${thSort('naoUsadas', 'Não usadas', true)}
+                        ${thSort('tempoMs', 'Horas trabalhadas', true)}
+                        ${thSort('retiradas', 'Retiradas', true)}
+                    </tr></thead>
+                    <tbody>
+                        ${rows.map(r => `<tr>
+                            <td class="muted">${isoDateToBR(r.dia)}</td>
+                            <td><b>${escapeHtml(r.colaborador)}</b>${r.retiradasAbertas > 0 ? `<div class="text-[10px] font-bold text-amber-600 mt-0.5">${fmtInt(r.retiradasAbertas)} em aberto · ${fmtInt(r.caixasEmAberto)} cx</div>` : ''}</td>
+                            <td class="num font-black text-slate-800">${fmtInt(r.pegou)} cx</td>
+                            <td class="num text-brand-700 font-bold">${fmtInt(r.virouProduto)} cx</td>
+                            <td class="muted">${fmtProdutos(r.porProduto)}</td>
+                            <td class="num ${r.naoUsadas > 0 ? 'text-red-600 font-bold' : 'muted'}">${r.naoUsadas > 0 ? fmtInt(r.naoUsadas) + ' cx' : '—'}</td>
+                            <td class="num">${fmtDuracao(r.tempoMs)}</td>
+                            <td class="num muted">${r.retiradas || '—'}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                    <tfoot><tr>
+                        <td colspan="2">Total${totEmAberto > 0 ? ` (+ ${fmtInt(totEmAberto)} cx em aberto)` : ''}</td>
+                        <td class="num">${fmtInt(totPegou)} cx</td>
+                        <td class="num">${fmtInt(totProduto)} cx</td>
+                        <td>${fmtProdutos(porProdutoGeral)}</td>
+                        <td class="num">${fmtInt(totNaoUsadas)} cx</td>
+                        <td class="num">${fmtDuracao(totTempoMs)}</td>
+                        <td class="num">${fmtInt(linhas.reduce((s, l) => s + l.retiradas, 0))}</td>
+                    </tr></tfoot>
+                </table>
+            `;
 
             lucide.createIcons();
         }
