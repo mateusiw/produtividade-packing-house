@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Produtividade SPG</title>
 
     <link id="siteFavicon" rel="icon" type="image/png" href="logo.png">
@@ -360,6 +360,483 @@
             :root:where(:not([data-theme="light"])) .text-slate-600,
             :root:where(:not([data-theme="light"])) .text-slate-700 { color: var(--ink-2) !important; }
             :root:where(:not([data-theme="light"])) .text-slate-800 { color: var(--ink) !important; }
+        }
+    </style>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+
+    <!-- ============================================================
+         CAMADA VISUAL 2026 — só aparência (tipografia, cores, raios,
+         sombras, navegação inferior no celular, tabelas em cartões).
+         Nada aqui muda regra de negócio: é um bloco de override que
+         vem depois de todo o CSS antigo, então vence sem precisar
+         reescrever nada acima.
+         ============================================================ -->
+    <style id="modern-2026">
+        :root {
+            --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 24px;
+            --line: #e6ece8; --line-strong: #d3ded7;
+            --shadow-sm: 0 1px 2px rgba(9,40,25,.04), 0 4px 14px rgba(9,40,25,.045);
+            --shadow-md: 0 2px 6px rgba(9,40,25,.05), 0 16px 40px rgba(9,40,25,.09);
+            --shadow-lg: 0 30px 70px rgba(9,40,25,.16);
+            --tab-h: 62px;
+        }
+        :root[data-theme="dark"], :root:where(:not([data-theme="light"])) {
+            --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.28);
+        }
+        body {
+            font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+            font-feature-settings: "cv11" 1;
+            letter-spacing: -0.005em;
+            background: radial-gradient(120% 60% at 8% -8%, rgba(18,165,101,.09), transparent 60%), var(--page);
+        }
+        h1, h2, h3, h4 { letter-spacing: -0.02em; }
+        .num, [class*="tabular"], .badge-total, .stat-pill { font-variant-numeric: tabular-nums; }
+
+        /* ---------- Menu lateral ---------- */
+        .app-sidebar {
+            width: 248px; padding: 18px 12px 14px;
+            background: linear-gradient(180deg, #0e2018 0%, #0a1712 100%);
+            border-right: 1px solid rgba(255,255,255,.06);
+        }
+        .app-main { margin-left: 248px; }
+        .app-sidebar-brand { padding: 0 6px 18px; }
+        .app-sidebar-brand h1 { font-size: 12.5px; letter-spacing: .04em; }
+        .app-sidebar-nav { gap: 2px; }
+        .app-sidebar-nav button {
+            padding: 10px 11px; border-radius: var(--r-md); font-size: 13px; font-weight: 600;
+            letter-spacing: -0.01em; color: rgba(238,244,240,.62); position: relative;
+        }
+        .app-sidebar-nav button i { opacity: .8; }
+        .app-sidebar-nav button:hover { background: rgba(255,255,255,.06); color: #fff; }
+        .app-sidebar-nav button.active {
+            background: rgba(31,191,109,.16); color: #7ff0b4; font-weight: 700;
+            box-shadow: inset 0 0 0 1px rgba(31,191,109,.28);
+        }
+        .app-sidebar-nav button.active i { opacity: 1; }
+        .app-sidebar-nav button.active::before {
+            content: ""; position: absolute; left: -12px; top: 50%; transform: translateY(-50%);
+            width: 3px; height: 20px; border-radius: 0 3px 3px 0; background: #1fbf6d;
+        }
+        body.sidebar-autohide .app-main { margin-left: 62px; }
+        body.sidebar-autohide .app-sidebar { width: 62px; }
+
+        /* ---------- Cabeçalho ---------- */
+        .app-topbar {
+            padding: 14px 26px; background: var(--surface-translucent);
+            backdrop-filter: saturate(1.6) blur(14px); -webkit-backdrop-filter: saturate(1.6) blur(14px);
+            border-bottom: 1px solid var(--line);
+        }
+        .app-topbar h2 { font-size: 19px; font-weight: 700; }
+        .app-topbar > div:last-child > button,
+        .app-topbar > div:last-child > div { border-radius: var(--r-md) !important; }
+        .app-content { padding: 22px 26px 44px; }
+
+        /* ---------- Cartões, campos, botões ---------- */
+        .form-card { border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+        .form-card-header { border-radius: var(--r-lg) var(--r-lg) 0 0; padding: 15px 18px; }
+        .rounded-xl { border-radius: var(--r-md) !important; }
+        .rounded-2xl { border-radius: var(--r-lg) !important; }
+        .parceiro-card { border-radius: var(--r-lg); border-color: var(--line); }
+        .preview-wrapper { border-radius: var(--r-xl); }
+        select, input[type="date"], input[type="datetime-local"], input[type="text"], input[type="number"], textarea {
+            border-radius: var(--r-sm) !important; border-width: 1px !important;
+            border-color: var(--line-strong) !important; min-height: 40px;
+        }
+        textarea { min-height: 64px; }
+        select:focus, input:focus, textarea:focus { box-shadow: 0 0 0 3.5px var(--brand-soft) !important; }
+        .add-btn { border-radius: var(--r-md); border-width: 1.5px; letter-spacing: .03em; }
+        .stat-pill, .badge-total, .cadastro-badge { font-weight: 600; }
+        button { transition: transform .12s ease, background .15s ease, color .15s ease, box-shadow .15s ease; }
+        .app-content > div { animation: pageIn .22s ease-out both; }
+        @keyframes pageIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+        /* ---------- Abas de período (segmented control) ---------- */
+        .seg {
+            display: inline-flex; align-items: center; gap: 2px; flex-wrap: nowrap;
+            padding: 3px; border-radius: 999px; background: var(--surface-2);
+            box-shadow: inset 0 0 0 1px var(--line);
+            max-width: 100%; overflow-x: auto; scrollbar-width: none;
+        }
+        .seg::-webkit-scrollbar { display: none; }
+        .seg > button {
+            flex: 0 0 auto; padding: 7px 14px; border-radius: 999px;
+            background: transparent; color: var(--muted);
+            font-size: 11.5px; font-weight: 600; letter-spacing: .01em; text-transform: none;
+            border: 0; white-space: nowrap; min-height: 32px;
+        }
+        .seg > button:hover { background: var(--surface-3); color: var(--ink); }
+        .seg > button.seg-on {
+            background: var(--surface); color: var(--brand-dark); font-weight: 700;
+            box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--brand-soft-strong);
+        }
+        .seg > button:active { transform: scale(.96); }
+        @media (max-width: 640px) {
+            .seg { width: 100%; }
+            .seg > button { padding: 8px 13px; min-height: 38px; font-size: 12px; }
+        }
+
+        /* ---------- Aba Entregas ---------- */
+        /* Coluna de lançamento um pouco mais larga que o resumo, e o resumo
+           acompanha a rolagem no desktop (fica sempre visível pra conferência). */
+        @media (min-width: 1024px) {
+            #pageEstoque { align-items: flex-start; gap: 22px; }
+            #pageEstoque > div:first-of-type { width: 56%; }
+            #pageEstoque > div:last-of-type { width: 44%; position: sticky; top: 84px; }
+        }
+        /* Caixa de filtro: sem moldura dura, vira uma faixa clara e enxuta. */
+        #pageEstoque .form-card > div > .rounded-xl:first-child {
+            border: 0 !important; background: var(--surface-2);
+            border-radius: var(--r-md) !important; padding: 10px 12px;
+        }
+        #pageEstoque .form-card > div > .rounded-xl:first-child .flex.flex-wrap { gap: 8px 10px; align-items: flex-end; }
+        #pageEstoque .section-label { font-size: 9px; letter-spacing: .07em; opacity: .75; }
+
+        #parceiroCardsWrapper .parceiro-card {
+            box-shadow: var(--shadow-sm); border-color: var(--line);
+            transition: box-shadow .18s ease, border-color .18s ease;
+        }
+        #parceiroCardsWrapper .parceiro-card:hover { box-shadow: var(--shadow-md); }
+        #parceiroCardsWrapper .parceiro-card-header {
+            background: var(--surface) !important; padding: 13px 15px;
+            border-bottom: 1px solid var(--line);
+        }
+        #parceiroCardsWrapper .parceiro-card-header:hover { background: var(--surface-2) !important; }
+        #parceiroCardsWrapper .parceiro-card-header > span:first-child { font-size: 13.5px; letter-spacing: -0.015em; }
+        #parceiroCardsWrapper .parceiro-card.is-concluido { border-left: 3px solid var(--brand); }
+        #parceiroCardsWrapper .parceiro-card-body { padding: 14px 15px; border-top: 0; }
+        /* Faixa de status: pílulas com peso igual e números tabulares. */
+        #parceiroCardsWrapper .parceiro-card-body > div:first-child > span,
+        #parceiroCardsWrapper .parceiro-card-body .stat-pill {
+            border-radius: 999px; font-variant-numeric: tabular-nums; padding: 5px 11px;
+        }
+        /* Bloco "registrar quem pegou": ação principal, respira mais e o + fica maior. */
+        #parceiroCardsWrapper .rounded-lg.bg-slate-50 {
+            background: var(--surface-2) !important; border: 1px solid var(--line) !important;
+            border-radius: var(--r-md) !important; padding: 11px 12px !important;
+        }
+        #parceiroCardsWrapper .rounded-lg.bg-slate-50 .flex.gap-1\.5 { gap: 8px; }
+        #parceiroCardsWrapper .rounded-lg.bg-slate-50 button { border-radius: var(--r-sm) !important; min-width: 44px; }
+        #parceiroCardsWrapper .lote-row { padding: 8px 2px; border-bottom-color: var(--line); font-variant-numeric: tabular-nums; }
+        #parceiroCardsWrapper .lote-row button { opacity: .45; transition: opacity .15s ease; }
+        #parceiroCardsWrapper .lote-row:hover button, #parceiroCardsWrapper .lote-row button:focus-visible { opacity: 1; }
+        #parceiroCardsWrapper .add-btn.\!bg-green-600 {
+            background: var(--brand) !important; border-color: var(--brand) !important;
+            border-radius: var(--r-md) !important; letter-spacing: .02em; box-shadow: var(--shadow-sm);
+        }
+        #pageEstoque .add-btn { min-height: 46px; }
+
+        /* Resumo: KPIs com número dominante e tabelas mais leves. */
+        #report-card { box-shadow: var(--shadow-md); }
+        #report-card [id^="stat"] { border-color: var(--line) !important; border-radius: var(--r-md) !important; }
+        #report-card [id^="stat"] .text-xl, #report-card [id^="stat"] .text-2xl { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+        #report-card .report-section-title { margin-bottom: 8px; }
+        #report-card table.report-table td, #report-card table.report-table th { padding-top: 9px; padding-bottom: 9px; }
+        #report-card [id^="stat"] .truncate { overflow: visible; text-overflow: clip; white-space: normal; }
+        @media (min-width: 1500px) {
+            #report-card .grid.grid-cols-2 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+        }
+        @media (max-width: 640px) {
+            #pageEstoque .form-card > div > .rounded-xl:first-child .flex.flex-wrap > div:first-child,
+            #pageEstoque .form-card > div > .rounded-xl:first-child .flex.flex-wrap > div:nth-child(2) { flex: 1 1 42%; }
+            #pageEstoque .form-card > div > .rounded-xl:first-child input[type="date"] { width: 100%; }
+            #parceiroCardsWrapper .rounded-lg.bg-slate-50 select { flex: 1 1 100%; }
+            #parceiroCardsWrapper .rounded-lg.bg-slate-50 .flex.gap-1\.5 { flex-wrap: wrap; }
+            #parceiroCardsWrapper .rounded-lg.bg-slate-50 input { flex: 1 1 0; }
+            #parceiroCardsWrapper .lote-row button { opacity: 1; }
+        }
+
+        /* ---------- Menus, listas suspensas e modais ---------- */
+        /* Seta própria em todos os selects (a nativa é datada e some no escuro). */
+        select {
+            appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237c8a82' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 10px center;
+            padding-right: 32px !important; background-color: var(--surface);
+        }
+        /* Navegadores novos deixam estilizar a lista aberta do select; onde não
+           houver suporte, o menu nativo continua igual. */
+        @supports (appearance: base-select) {
+            select, ::picker(select) { appearance: base-select; }
+            ::picker(select) {
+                border: 1px solid var(--line); border-radius: var(--r-md);
+                background: var(--surface); box-shadow: var(--shadow-md);
+                padding: 6px; margin-top: 6px; max-height: 320px;
+            }
+            select option {
+                padding: 9px 11px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600;
+                color: var(--ink); display: flex; align-items: center; gap: 8px;
+            }
+            select option:hover { background: var(--surface-3); }
+            select option:checked { background: var(--brand-soft); color: var(--brand-dark); }
+            select option::checkmark { order: 2; margin-left: auto; color: var(--brand); }
+            select::picker-icon {
+                content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237c8a82' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+                width: 16px; height: 16px; opacity: 1; transition: transform .18s ease;
+            }
+            select:open::picker-icon { transform: rotate(180deg); }
+        }
+
+        /* Painéis dos multiselects (parceiro, destino, produto). */
+        [id$="Panel"] {
+            border: 1px solid var(--line) !important; border-radius: var(--r-md) !important;
+            box-shadow: var(--shadow-md) !important; background: var(--surface) !important;
+            padding: 6px; margin-top: 6px !important;
+        }
+        [id$="Panel"] label, [id$="Panel"] > div, [id$="Panel"] button {
+            border-radius: var(--r-sm); padding: 8px 10px; font-size: 12.5px; font-weight: 600;
+        }
+        [id$="Panel"] label:hover, [id$="Panel"] button:hover { background: var(--surface-3); }
+
+        /* Modais: cartão claro, cantos maiores, sombra profunda. */
+        body > [id$="Modal"].fixed { background: rgba(6,20,13,.46); backdrop-filter: blur(3px); }
+        body > [id$="Modal"].fixed > div {
+            border-radius: var(--r-xl) !important; border: 1px solid var(--line);
+            box-shadow: var(--shadow-lg); overflow: hidden;
+            animation: modalIn .2s cubic-bezier(.32,.72,0,1) both;
+        }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+        body > [id$="Modal"] .form-card-header { padding: 15px 18px; border-bottom: 1px solid var(--line); }
+        body > [id$="Modal"] h2, body > [id$="Modal"] h3 { letter-spacing: -0.02em; }
+        body > [id$="Modal"] button.add-btn, body > [id$="Modal"] .add-btn { min-height: 44px; }
+
+        /* ---------- Abas com tabela (Rastreamento, Lotes, Histórico,
+                      Desempenho, Hist. do Colaborador, Relatórios) ---------- */
+        #pageBaixas > .rounded-xl:first-child,
+        #pageLotes .rounded-xl.border,
+        #pageRelatorios > div > .rounded-xl,
+        #pageDesempenho > .rounded-xl,
+        #pageHistoricoColaborador > .rounded-xl {
+            border: 0 !important; background: var(--surface-2);
+            border-radius: var(--r-lg) !important; padding: 14px !important;
+        }
+        #pageBaixas .multiselect > button,
+        #pageLotes .multiselect > button,
+        #pageDesempenho .multiselect > button,
+        #pageHistoricoColaborador .multiselect > button,
+        #pageRelatorios .multiselect > button {
+            background: var(--surface) !important; border-width: 1px !important;
+            border-color: var(--line-strong) !important; border-radius: var(--r-sm) !important;
+            min-height: 40px; font-weight: 600;
+        }
+        #pageBaixas .border-t, #pageLotes .border-t,
+        #pageDesempenho .border-t, #pageHistoricoColaborador .border-t { border-color: var(--line) !important; }
+
+        /* Tabela: moldura de cartão, cabeçalho fixo e linhas em fio de cabelo. */
+        .table-shell {
+            background: var(--surface); border: 1px solid var(--line);
+            border-radius: var(--r-lg); box-shadow: var(--shadow-sm); overflow: hidden;
+        }
+        .table-shell > .overflow-x-auto, .table-shell.overflow-x-auto { border-radius: inherit; }
+        .report-table { border-collapse: separate; border-spacing: 0; }
+        .report-table thead th {
+            position: sticky; top: 0; z-index: 2; background: var(--surface-2);
+            font-size: 9.5px; font-weight: 700; letter-spacing: .07em; color: var(--muted);
+            padding: 11px 14px; border-bottom: 1px solid var(--line);
+        }
+        .report-table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+        .report-table tbody tr:last-child td { border-bottom: 0; }
+        .report-table tbody tr { transition: background .12s ease; }
+        .report-table tbody tr:hover td { background: var(--surface-2); }
+        .report-table tbody tr.section-row td {
+            background: var(--surface-3) !important; font-weight: 700; letter-spacing: -0.01em;
+            padding-top: 9px; padding-bottom: 9px;
+        }
+        .report-table tfoot td { padding: 12px 14px; border-top: 1px solid var(--brand-soft-strong); }
+        /* Números sempre alinhados na mesma grade. */
+        .report-table td.text-right, .report-table th.text-right { font-variant-numeric: tabular-nums; }
+        /* Selos (destino, rastreio, status) como pílulas. */
+        .report-table td .rounded, .report-table td .rounded-md, .report-table td .rounded-full,
+        .report-table td .badge, .report-table td .cadastro-badge, .report-table td .stat-pill {
+            border-radius: 999px !important; padding: 3px 9px; font-weight: 600; font-size: 10.5px;
+            white-space: nowrap;
+        }
+        @media (max-width: 1100px) {
+            .report-table thead th { padding-left: 9px; padding-right: 9px; }
+            .report-table tbody td, .report-table tfoot td { padding-left: 9px; padding-right: 9px; }
+        }
+        /* Com selos em linha única a tabela precisa de mais largura útil:
+           deixa a rolagem horizontal agir em vez de comprimir as colunas. */
+        #pageBaixas table.report-table { min-width: 720px; }
+        /* Ações da linha discretas até o hover (no toque seguem visíveis). */
+        @media (hover: hover) {
+            .report-table tbody td:last-child button { opacity: .4; transition: opacity .15s ease; }
+            .report-table tbody tr:hover td:last-child button,
+            .report-table tbody td:last-child button:focus-visible { opacity: 1; }
+        }
+        .report-table th[onclick] { cursor: pointer; }
+        .report-table th[onclick]:hover { color: var(--brand-dark); }
+        /* Vazio: mensagem centrada com respiro, em vez de uma linha solta. */
+        .summary-row:only-child { padding: 30px 16px; justify-content: center; text-align: center; }
+        @media (max-width: 640px) {
+            #pageBaixas > .rounded-xl:first-child,
+            #pageLotes .rounded-xl.border,
+            #pageRelatorios > div > .rounded-xl,
+            #pageDesempenho > .rounded-xl,
+            #pageHistoricoColaborador > .rounded-xl { padding: 11px !important; border-radius: var(--r-md) !important; }
+            .table-shell { border-radius: var(--r-md); }
+        }
+
+        /* ---------- Tabelas ---------- */
+        .report-table th { font-size: 9.5px; letter-spacing: .06em; border-bottom-width: 1px; }
+        .report-table tbody tr:nth-child(even) td { background: transparent; }
+        .report-table tbody tr:hover td { background: var(--surface-2); }
+        .report-table td { border-bottom-color: var(--line); }
+
+        /* ---------- Barra de abas do celular ---------- */
+        #mobileTabBar { display: none; }
+        #maisSheet { display: none; }
+        @media (max-width: 900px) {
+            .app-sidebar { display: none !important; }
+            .app-main { margin-left: 0 !important; }
+            body.sidebar-autohide .app-main { margin-left: 0 !important; }
+            body { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 14px) !important; }
+            .app-topbar { padding: 11px 14px; gap: 8px; }
+            .app-topbar h2 { font-size: 16px; }
+            .app-topbar p { font-size: 10.5px; }
+            .app-content { padding: 14px 14px 26px; }
+            .app-topbar > div:last-child > button { width: 40px; height: 40px; }
+
+            #mobileTabBar {
+                display: grid; grid-template-columns: repeat(5, 1fr); position: fixed;
+                left: 0; right: 0; bottom: 0; z-index: 60;
+                padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+                background: var(--surface-translucent);
+                backdrop-filter: saturate(1.6) blur(18px); -webkit-backdrop-filter: saturate(1.6) blur(18px);
+                border-top: 1px solid var(--line);
+            }
+            #maisSheet { display: block; }
+        }
+        .mtab {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+            min-height: 50px; border-radius: var(--r-md); color: var(--muted);
+            font-size: 10px; font-weight: 600; letter-spacing: -0.01em;
+        }
+        .mtab i { width: 21px; height: 21px; }
+        .mtab.active { color: var(--brand); background: var(--brand-soft); font-weight: 700; }
+        .mtab:active { transform: scale(.94); }
+
+        /* Folha inferior do "Mais" */
+        #maisSheet { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+        #maisSheet.open { pointer-events: auto; }
+        #maisSheetBackdrop { position: absolute; inset: 0; background: rgba(6,20,13,.5); opacity: 0; transition: opacity .2s ease; backdrop-filter: blur(2px); }
+        #maisSheet.open #maisSheetBackdrop { opacity: 1; }
+        #maisSheetPanel {
+            position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface);
+            border-radius: var(--r-xl) var(--r-xl) 0 0; border-top: 1px solid var(--line);
+            box-shadow: var(--shadow-lg); padding: 10px 12px calc(16px + env(safe-area-inset-bottom));
+            transform: translateY(102%); transition: transform .26s cubic-bezier(.32,.72,0,1);
+        }
+        #maisSheet.open #maisSheetPanel { transform: none; }
+        #maisSheetPanel .grip { width: 40px; height: 4px; border-radius: 99px; background: var(--line-strong); margin: 4px auto 12px; }
+        .msheet-item {
+            display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 12px;
+            border-radius: var(--r-md); color: var(--ink); font-size: 14px; font-weight: 600; text-align: left;
+        }
+        .msheet-item i { color: var(--muted); width: 19px; height: 19px; flex-shrink: 0; }
+        .msheet-item:active { background: var(--surface-3); }
+        .msheet-item.active { background: var(--brand-soft); color: var(--brand-dark); font-weight: 700; }
+        .msheet-item.active i { color: var(--brand); }
+
+        /* ---------- Celular: campos, modais e tabelas em cartões ---------- */
+        @media (max-width: 640px) {
+            select, input[type="text"], input[type="number"], input[type="date"],
+            input[type="datetime-local"], textarea { font-size: 16px !important; min-height: 44px; }
+            .app-content > div [id$="Modal"] { padding: 0; }
+            body > [id$="Modal"].fixed { align-items: flex-end !important; padding: 0 !important; }
+            body > [id$="Modal"].fixed > div {
+                max-width: 100% !important; max-height: 92vh !important;
+                border-radius: var(--r-xl) var(--r-xl) 0 0 !important;
+                padding-bottom: env(safe-area-inset-bottom);
+                animation: sheetUp .26s cubic-bezier(.32,.72,0,1) both;
+            }
+            body > [id$="Modal"].fixed > div > .form-card-header { border-radius: var(--r-xl) var(--r-xl) 0 0 !important; }
+            @keyframes sheetUp { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+
+            /* Toda tabela de relatório vira lista de cartões (menos o card
+               compartilhável, que é exportado como imagem em largura fixa).
+               Os rótulos por campo vêm do data-label preenchido pelo JS
+               a partir do <thead>. */
+            .cards-table table.report-table, table.report-table.cards-table { min-width: 0 !important; width: 100%; }
+            .cards-table table.report-table thead, table.report-table.cards-table thead { display: none; }
+            .cards-table table.report-table, .cards-table table.report-table tbody,
+            .cards-table table.report-table tfoot, .cards-table table.report-table tr,
+            table.report-table.cards-table, table.report-table.cards-table tbody,
+            table.report-table.cards-table tfoot, table.report-table.cards-table tr { display: block; width: 100%; }
+            .cards-table table.report-table tbody tr, table.report-table.cards-table tbody tr {
+                border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px;
+                overflow: hidden; background: var(--surface);
+            }
+            .cards-table table.report-table td, table.report-table.cards-table td {
+                display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                text-align: right; border-bottom: 1px dashed var(--line);
+            }
+            .cards-table table.report-table td:last-child, table.report-table.cards-table td:last-child { border-bottom: none; }
+            .cards-table table.report-table td::before, table.report-table.cards-table td::before {
+                content: attr(data-label); font-size: 9px; font-weight: 700; text-transform: uppercase;
+                letter-spacing: .05em; color: var(--muted); text-align: left; flex-shrink: 0;
+            }
+            .cards-table table.report-table tbody tr.section-row td,
+            table.report-table.cards-table tbody tr.section-row td,
+            .cards-table table.report-table td[colspan]:not([colspan="1"]),
+            table.report-table.cards-table td[colspan]:not([colspan="1"]) { justify-content: flex-start; text-align: left; }
+            .cards-table table.report-table tbody tr.section-row td::before,
+            table.report-table.cards-table tbody tr.section-row td::before,
+            .cards-table table.report-table td[colspan]:not([colspan="1"])::before,
+            table.report-table.cards-table td[colspan]:not([colspan="1"])::before { content: none; }
+            .table-shell { background: transparent; border: 0; box-shadow: none; overflow: visible; }
+            .cards-table table.report-table tfoot tr, table.report-table.cards-table tfoot tr {
+                background: var(--brand-soft) !important; border: 1px solid var(--brand-soft-strong);
+                border-radius: var(--r-md);
+            }
+        }
+
+        /* ============================================================
+           Correções de layout no celular (algumas páginas estouravam
+           a largura da tela e ficavam com conteúdo cortado).
+           ============================================================ */
+        @media (max-width: 900px) {
+            /* Nada rola de lado na página: o que estoura (tabela larga, coluna
+               fixa) é contido aqui em vez de vazar pra fora da viewport e ser
+               cortado. 'clip' (e não 'hidden') não vira container de rolagem,
+               então o cabeçalho continua grudando no topo (position: sticky). */
+            html, body { overflow-x: clip; }
+            .app-main { overflow-x: clip; max-width: 100%; }
+            .app-content { max-width: 100%; }
+
+            /* Cabeçalho: a linha de ações quebra sozinha quando falta espaço, em
+               vez de empurrar os botões pra fora da tela. */
+            .app-topbar { flex-wrap: wrap; row-gap: 8px; }
+            .app-topbar > div:first-child { flex: 1 1 55%; min-width: 0; }
+            .app-topbar > div:last-child { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
+            /* A regra dos botões-ícone (40x40) NÃO vale pros botões com rótulo
+               (Compartilhar / Baixa) — senão o texto é espremido e cortado. */
+            .app-topbar > div:last-child > button:not(#compartilharResumoBtn):not(#baixaEstoqueToggleBtn) {
+                width: 40px; height: 40px; flex: 0 0 auto; padding: 0;
+            }
+            #compartilharResumoBtn, #baixaEstoqueToggleBtn {
+                width: auto !important; height: 40px; flex: 0 0 auto; white-space: nowrap;
+            }
+        }
+        /* Telas bem estreitas: os botões de ação do cabeçalho ficam só com o
+           ícone, pra caber Ajuda + Tema + ação principal na mesma linha. */
+        @media (max-width: 400px) {
+            .app-topbar > div:last-child { gap: 6px; }
+            #compartilharResumoBtn span, #baixaEstoqueToggleBtn span { display: none; }
+            #compartilharResumoBtn, #baixaEstoqueToggleBtn {
+                width: 40px !important; padding: 0; justify-content: center;
+            }
+        }
+        /* Card de Resumo (Entregas) no celular: as tabelas já viram cartões pelo
+           labelTables()+CSS acima; aqui só garantimos que a moldura do card não
+           volte a criar rolagem lateral. */
+        @media (max-width: 640px) {
+            #report-card .cards-table table.report-table,
+            #report-card table.report-table.cards-table { min-width: 0 !important; width: 100%; }
+            #report-card .table-shell { background: transparent; border: 0; box-shadow: none; overflow: visible; }
+            #previewBody [id^="summary"] { overflow: visible; }
         }
     </style>
 </head>
@@ -6699,6 +7176,145 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         }
 
         function hideMessageModal() { document.getElementById('messageModal').classList.add('hidden'); unlockBodyScroll(); }
+    </script>
+
+    <!-- Navegação inferior (só no celular) — mesmas páginas do menu lateral -->
+    <nav id="mobileTabBar" aria-label="Navegação">
+        <button type="button" class="mtab" data-page="inicio" onclick="switchPage('inicio')"><i data-lucide="boxes"></i>Estoque</button>
+        <button type="button" class="mtab" data-page="estoque" onclick="switchPage('estoque')"><i data-lucide="truck"></i>Entregas</button>
+        <button type="button" class="mtab" data-page="baixas" onclick="switchPage('baixas')"><i data-lucide="list-checks"></i>Rastreio</button>
+        <button type="button" class="mtab" data-page="lotes" onclick="switchPage('lotes')"><i data-lucide="layers"></i>Lotes</button>
+        <button type="button" class="mtab" id="mtabMais" onclick="toggleMaisSheet(true)"><i data-lucide="menu"></i>Mais</button>
+    </nav>
+
+    <div id="maisSheet" aria-hidden="true">
+        <div id="maisSheetBackdrop" onclick="toggleMaisSheet(false)"></div>
+        <div id="maisSheetPanel" role="dialog" aria-label="Mais opções">
+            <div class="grip"></div>
+            <button type="button" class="msheet-item" data-page="movimentacoes" onclick="switchPage('movimentacoes'); toggleMaisSheet(false)"><i data-lucide="arrow-left-right"></i> Histórico</button>
+            <button type="button" class="msheet-item" data-page="historicoColaborador" onclick="switchPage('historicoColaborador'); toggleMaisSheet(false)"><i data-lucide="clipboard-list"></i> Histórico do Colaborador</button>
+            <button type="button" class="msheet-item" data-page="desempenho" onclick="switchPage('desempenho'); toggleMaisSheet(false)"><i data-lucide="trophy"></i> Desempenho</button>
+            <button type="button" class="msheet-item" data-page="relatorios" onclick="switchPage('relatorios'); toggleMaisSheet(false)"><i data-lucide="bar-chart-3"></i> Relatórios</button>
+            <button type="button" class="msheet-item" onclick="openCadastroModal(); toggleMaisSheet(false)"><i data-lucide="settings"></i> Configurações</button>
+            <button type="button" class="msheet-item" onclick="openAjudaModal(); toggleMaisSheet(false)"><i data-lucide="help-circle"></i> Ajuda</button>
+            <button type="button" class="msheet-item" onclick="toggleTheme()"><i data-lucide="sun-moon"></i> Alternar tema</button>
+        </div>
+    </div>
+
+    <script>
+        /* Camada visual 2026 — só navegação/apresentação, nenhuma regra de negócio. */
+        (function () {
+            const MAIS_PAGES = ['movimentacoes', 'historicoColaborador', 'desempenho', 'relatorios'];
+
+            window.toggleMaisSheet = function (open) {
+                const sheet = document.getElementById('maisSheet');
+                sheet.classList.toggle('open', open !== false);
+                sheet.setAttribute('aria-hidden', open === false ? 'true' : 'false');
+            };
+
+            function syncTabs(pagina) {
+                document.querySelectorAll('#mobileTabBar .mtab[data-page], #maisSheetPanel .msheet-item[data-page]').forEach(b => {
+                    b.classList.toggle('active', b.dataset.page === pagina);
+                });
+                const mais = document.getElementById('mtabMais');
+                if (mais) mais.classList.toggle('active', MAIS_PAGES.includes(pagina));
+            }
+
+            /* Rótulos por campo pras tabelas virarem cartões no celular: copia o
+               texto de cada <th> pro data-label das células da mesma coluna. */
+            function labelTables() {
+                document.querySelectorAll('table.report-table').forEach(table => {
+                    // As tabelas do card de Resumo (#report-card) também entram: no
+                    // celular elas viram lista de cartões (via CSS @media 640) em
+                    // vez de ficarem cortadas com rolagem lateral presa dentro do
+                    // card; no desktop o CSS de cartão não vale e elas seguem
+                    // tabela normal, inclusive na imagem gerada pra compartilhar.
+                    const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+                    if (!heads.length) return;
+                    table.classList.add('cards-table');
+                    const shell = table.closest('.overflow-x-auto') || table.parentElement;
+                    if (shell && shell !== document.body) shell.classList.add('table-shell');
+                    table.querySelectorAll('tbody tr, tfoot tr').forEach(tr => {
+                        let col = 0;
+                        [...tr.children].forEach(td => {
+                            const span = td.colSpan || 1;
+                            if (span === 1 && !td.hasAttribute('data-label') && heads[col]) td.setAttribute('data-label', heads[col]);
+                            col += span;
+                        });
+                    });
+                });
+            }
+
+            /* Abas de período: agrupa os botões de atalho num segmented control
+               e marca visualmente o que está selecionado. Só apresentação — o
+               onclick original de cada botão continua igual. */
+            function segmentGroups() {
+                document.querySelectorAll('button[onclick*="QuickFilter("]').forEach(btn => {
+                    const group = btn.parentElement;
+                    if (!group || group.dataset.seg) return;
+                    const btns = [...group.children].filter(el => el.tagName === 'BUTTON');
+                    if (btns.length < 2 || btns.length !== group.children.length) return;
+                    group.dataset.seg = '1';
+                    group.classList.add('seg');
+                    group.classList.remove('gap-1.5', 'flex-wrap');
+
+                    btns.forEach(b => {
+                        const oc = b.getAttribute('onclick') || '';
+                        const m = oc.match(/(\w*QuickFilter)\(\s*'([^']*)'/);
+                        if (!m) return;
+                        b.dataset.segFn = m[1];
+                        if (!b.dataset.periodo) b.dataset.periodo = m[2];
+                        wrapFilterFn(m[1]);
+                    });
+
+                    /* Estado inicial: marca o período vigente (padrão 'hoje' quando existe). */
+                    const inicial = btns.find(b => b.dataset.periodo === 'hoje') || btns[0];
+                    if (!btns.some(b => b.classList.contains('seg-on'))) markSeg(inicial);
+                });
+            }
+
+            function markSeg(btn) {
+                if (!btn) return;
+                [...btn.parentElement.children].forEach(b => b.classList.toggle('seg-on', b === btn));
+            }
+
+            /* Envolve cada setXQuickFilter para o destaque acompanhar também as
+               chamadas feitas por código (limpar filtros, troca de página, carga). */
+            const wrapped = new Set();
+            function wrapFilterFn(nome) {
+                if (wrapped.has(nome) || typeof window[nome] !== 'function') return;
+                wrapped.add(nome);
+                const original = window[nome];
+                window[nome] = function (periodo) {
+                    const r = original.apply(this, arguments);
+                    document.querySelectorAll('.seg > button[data-seg-fn="' + nome + '"]').forEach(b => {
+                        if (b.dataset.periodo === String(periodo)) markSeg(b);
+                    });
+                    return r;
+                };
+            }
+
+            let pending;
+            const observer = new MutationObserver(() => {
+                clearTimeout(pending);
+                pending = setTimeout(() => { labelTables(); segmentGroups(); }, 60);
+            });
+
+            function boot() {
+                const original = window.switchPage;
+                if (typeof original === 'function') {
+                    window.switchPage = function (p) { original.apply(this, arguments); syncTabs(p); };
+                }
+                syncTabs(typeof paginaAtiva !== 'undefined' ? paginaAtiva : 'inicio');
+                labelTables();
+                segmentGroups();
+                observer.observe(document.body, { childList: true, subtree: true });
+                if (window.lucide) lucide.createIcons();
+            }
+
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+            else boot();
+        })();
     </script>
 </body>
 </html>
