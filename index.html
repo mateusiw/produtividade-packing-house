@@ -916,6 +916,11 @@
                         <span class="hidden sm:inline">Compartilhar Resumo</span>
                         <span class="sm:hidden">Compartilhar</span>
                     </button>
+                    <button type="button" id="compartilharHistoricoColabBtn" onclick="confirmBeforeShareHistoricoColab()" class="hidden items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black shadow-lg shadow-brand-600/20 transition-all active:scale-95 border border-transparent shrink-0">
+                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Compartilhar Histórico</span>
+                        <span class="sm:hidden">Compartilhar</span>
+                    </button>
                 </div>
             </header>
 
@@ -1521,7 +1526,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 <button onclick="hideConfirmModal()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-sm transition-colors uppercase">
                     Cancelar
                 </button>
-                <button onclick="executeShareResumo()" class="px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-brand-600/20 active:scale-95 uppercase">
+                <button onclick="executeConfirmedShare()" class="px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-brand-600/20 active:scale-95 uppercase">
                     Gerar
                 </button>
             </div>
@@ -2469,6 +2474,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             document.getElementById('baixaEstoqueToggleBtn').classList.toggle('inline-flex', pagina === 'inicio');
             document.getElementById('compartilharResumoBtn').classList.toggle('hidden', pagina !== 'estoque');
             document.getElementById('compartilharResumoBtn').classList.toggle('inline-flex', pagina === 'estoque');
+            document.getElementById('compartilharHistoricoColabBtn').classList.toggle('hidden', pagina !== 'historicoColaborador');
+            document.getElementById('compartilharHistoricoColabBtn').classList.toggle('inline-flex', pagina === 'historicoColaborador');
 
             if (pagina === 'relatorios') openRelatoriosPage();
             if (pagina === 'movimentacoes') renderMovimentacoesPage();
@@ -4005,7 +4012,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     </div>
                     <div class="min-w-0">
                         <div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 truncate">${label}</div>
-                        <div class="text-2xl sm:text-3xl font-black ${valueClass || 'text-slate-800'} leading-tight">${value}</div>
+                        <div class="text-2xl sm:text-3xl font-black ${valueClass || 'text-slate-800'} leading-tight whitespace-nowrap">${value}</div>
                     </div>
                 </div>
             `;
@@ -4276,14 +4283,39 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         }
 
         // ---------- Compartilhar resumo (download da imagem) ----------
+        // O modal de confirmação é compartilhado por mais de um botão de
+        // "gerar imagem" (Compartilhar Resumo na aba Entregas, Compartilhar
+        // Histórico na aba Histórico do Colaborador); pendingShareTarget diz
+        // pro botão "Gerar" do modal qual fluxo executar.
+        let pendingShareTarget = 'resumo';
+
         function confirmBeforeShare() {
             const savedCards = parceiroCards.filter(c => c.entregaId !== null);
             if (savedCards.length === 0) return showMessageModal('Atenção', 'Ainda não há entregas no período selecionado para compartilhar.', 'error');
 
+            pendingShareTarget = 'resumo';
             document.getElementById('confirmFiltroLabel').innerText = entregasFiltroLabel();
             document.getElementById('confirmModal').classList.remove('hidden');
             lockBodyScroll();
             lucide.createIcons();
+        }
+
+        function confirmBeforeShareHistoricoColab() {
+            const content = document.getElementById('historicoColabContent');
+            if (content.classList.contains('hidden')) {
+                return showMessageModal('Atenção', 'Não há dados no período selecionado para gerar imagem.', 'error');
+            }
+
+            pendingShareTarget = 'historicoColab';
+            document.getElementById('confirmFiltroLabel').innerText = historicoColabFiltroLabel();
+            document.getElementById('confirmModal').classList.remove('hidden');
+            lockBodyScroll();
+            lucide.createIcons();
+        }
+
+        function executeConfirmedShare() {
+            if (pendingShareTarget === 'historicoColab') return exportHistoricoColaboradorImagem();
+            return executeShareResumo();
         }
 
         function hideConfirmModal() {
@@ -4335,6 +4367,76 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             if (!preparedShareData) return;
             const { filename, dataUrl } = preparedShareData;
             downloadFile(dataUrl, filename);
+        }
+
+        function historicoColabFiltroLabel() {
+            const inicio = document.getElementById('historicoColabDataInicio').value;
+            const fim = document.getElementById('historicoColabDataFim').value;
+            if (!inicio && !fim) return 'Tudo';
+            if (inicio && fim && inicio === fim) return isoDateToBR(inicio);
+            return `${inicio ? isoDateToBR(inicio) : '...'} – ${fim ? isoDateToBR(fim) : '...'}`;
+        }
+
+        // Gera uma imagem (PNG) dos KPIs + tabela da aba "Histórico do Colaborador",
+        // no período/filtros atualmente aplicados. Reaproveita os mesmos modais e
+        // helpers do "Compartilhar Resumo" (Início), já que é o mesmo fluxo de
+        // exportar um trecho da tela como imagem.
+        async function exportHistoricoColaboradorImagem() {
+            if (isProcessingShare) return;
+            const content = document.getElementById('historicoColabContent');
+            if (content.classList.contains('hidden')) {
+                return showMessageModal('Atenção', 'Não há dados no período selecionado para gerar imagem.', 'error');
+            }
+
+            isProcessingShare = true;
+            hideConfirmModal();
+            showLoadingModal();
+
+            // Força tema claro durante a captura: a imagem exportada deve sair
+            // sempre branca, mesmo com o app no modo escuro (manual ou por
+            // prefers-color-scheme do sistema). Restaura o tema original no fim.
+            const prevTheme = document.documentElement.getAttribute('data-theme');
+            document.documentElement.setAttribute('data-theme', 'light');
+
+            // Sobra de margem branca embaixo/nas laterais: sem ela, a tabela
+            // termina exatamente na borda da imagem e qualquer arredondamento
+            // de 1-2px na medida de altura do html-to-image corta a última
+            // linha (o "Total"). Restaura o estilo original no fim.
+            const prevStyle = content.getAttribute('style');
+            content.style.padding = '4px 4px 24px';
+            content.style.backgroundColor = '#ffffff';
+
+            try {
+                await new Promise(r => requestAnimationFrame(r));
+
+                const periodoTxt = historicoColabFiltroLabel();
+
+                const dataUrl = await htmlToImage.toPng(content, {
+                    pixelRatio: 4,
+                    cacheBust: true,
+                    backgroundColor: '#ffffff'
+                });
+
+                const filename = `Historico Colaborador - ${periodoTxt.replace(/\//g, '-')}.png`;
+
+                preparedShareData = { filename, dataUrl };
+                downloadFile(dataUrl, filename);
+
+                hideLoadingModal();
+                document.getElementById('successModal').classList.remove('hidden');
+                lockBodyScroll();
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+                hideLoadingModal();
+                showMessageModal('Erro', 'Falha ao gerar a imagem do histórico.', 'error');
+            } finally {
+                if (prevStyle === null) content.removeAttribute('style');
+                else content.setAttribute('style', prevStyle);
+                if (prevTheme === null) document.documentElement.removeAttribute('data-theme');
+                else document.documentElement.setAttribute('data-theme', prevTheme);
+                isProcessingShare = false;
+            }
         }
 
         function hideSuccessModal() {
