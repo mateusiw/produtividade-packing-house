@@ -1821,12 +1821,21 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
             <div class="p-5 space-y-3 overflow-y-auto hide-scrollbar flex-1 min-h-0">
                 <div id="fecharAlocResumo" class="rounded-xl bg-brand-50 border border-brand-100 p-3 text-[13px] font-semibold text-slate-700"></div>
-                <div>
-                    <label class="section-label">
-                        <i data-lucide="clock" class="w-3 h-3"></i> Horário que finalizou
-                        <i data-lucide="info" class="w-3 h-3 text-slate-300" title="Vem preenchido com agora, mas dá pra corrigir — útil quando a baixa é lançada depois do colaborador já ter terminado"></i>
-                    </label>
-                    <input type="datetime-local" id="fecharAlocHorario" class="w-full p-2.5 border font-semibold text-sm">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="section-label">
+                            <i data-lucide="clock" class="w-3 h-3"></i> Começou
+                            <i data-lucide="info" class="w-3 h-3 text-slate-300" title="Vem preenchido com o horário registrado, mas dá pra corrigir — útil quando a retirada foi lançada antes ou depois do colaborador ter começado de fato"></i>
+                        </label>
+                        <input type="datetime-local" id="fecharAlocHorarioInicio" class="w-full p-2.5 border font-semibold text-sm">
+                    </div>
+                    <div>
+                        <label class="section-label">
+                            <i data-lucide="clock" class="w-3 h-3"></i> Finalizou
+                            <i data-lucide="info" class="w-3 h-3 text-slate-300" title="Vem preenchido com agora, mas dá pra corrigir — útil quando a baixa é lançada depois do colaborador já ter terminado"></i>
+                        </label>
+                        <input type="datetime-local" id="fecharAlocHorario" class="w-full p-2.5 border font-semibold text-sm">
+                    </div>
                 </div>
                 <div>
                     <div class="flex items-center justify-between mb-2">
@@ -2165,7 +2174,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                             <li>Clique em <b>+ Produto</b> (ou aperte Enter) pra adicionar mais linhas.</li>
                             <li>Se alguma caixa não deu pra processar (lote não prestou, etc.), abra <b>"Teve caixa perdida / descartada?"</b> e informe a quantidade (e o motivo, opcional). Ela abate do "não processado" igual uma caixa processada, mas sem virar produto nem entrar no estoque.</li>
                             <li>O <b>contador</b> mostra quanto você já informou (produto + perda) versus o que foi pego. Não precisa bater exato — o que faltar continua como "não processado".</li>
-                            <li>Confira o <b>Horário que finalizou</b> (vem preenchido com agora, mas dá pra corrigir).</li>
+                            <li>Confira os horários <b>Começou</b> e <b>Finalizou</b> (vêm preenchidos automaticamente, mas dá pra corrigir os dois — é a partir deles que a produtividade é calculada).</li>
                             <li>Clique em <b>Dar baixa</b>. Os produtos entram no estoque e o "processado" do card aumenta.</li>
                         </ul>
                         <p>A <b>lixeira</b> ao lado de "Fechar" cancela a retirada (as caixas voltam a ficar livres) — use se registrou errado.</p>
@@ -3188,6 +3197,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                 + `de ${escapeHtml(card.produtor)} · ${isoDateToBR(card.dataColheita)}`
                 + `<span class="block mt-1 text-[11px] text-slate-500 font-semibold">Pegou às ${aloc.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · trabalhando <span data-desde="${aloc.criadoDate.toISOString()}">${humanizarDesde(aloc.criadoDate)}</span></span>`;
 
+            document.getElementById('fecharAlocHorarioInicio').value = dateToDatetimeLocalValue(aloc.criadoDate);
             document.getElementById('fecharAlocHorario').value = dateToDatetimeLocalValue(new Date());
             document.getElementById('fecharAlocPerdaFields').classList.add('hidden');
             document.getElementById('fecharAlocPerdaQtd').value = '';
@@ -3327,9 +3337,15 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             }
             if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
 
+            const horarioInicioValue = document.getElementById('fecharAlocHorarioInicio').value;
+            const criadoEm = horarioInicioValue ? new Date(horarioInicioValue) : aloc.criadoDate;
+            if (isNaN(criadoEm.getTime())) return showMessageModal('Atenção', 'Horário de início inválido.', 'error');
+
             const horarioValue = document.getElementById('fecharAlocHorario').value;
             const fechadaEm = horarioValue ? new Date(horarioValue) : new Date();
             if (isNaN(fechadaEm.getTime())) return showMessageModal('Atenção', 'Horário de finalização inválido.', 'error');
+
+            if (criadoEm > fechadaEm) return showMessageModal('Atenção', 'O horário que começou não pode ser depois do que finalizou.', 'error');
 
             const informadasProduto = linhas.reduce((s, l) => s + l.quantidade, 0);
             const informadas = informadasProduto + perdaQuantidade;
@@ -3360,6 +3376,7 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
 
                 const { error: alocErr } = await db.from('alocacoes').update({
                     status: 'fechada',
+                    created_at: criadoEm.toISOString(),
                     fechada_em: fechadaEm.toISOString(),
                     perda_quantidade: perdaQuantidade,
                     perda_motivo: perdaMotivo || null
@@ -3370,6 +3387,8 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     if (!card.lotes.some(l => l.id === row.id)) card.lotes.push(mapProcessamentoRow(row));
                 });
                 aloc.status = 'fechada';
+                aloc.criadoDate = criadoEm;
+                aloc.fechadaDate = fechadaEm;
                 aloc.perdaQuantidade = perdaQuantidade;
                 aloc.perdaMotivo = perdaMotivo;
                 hideFecharAlocacaoModal();
