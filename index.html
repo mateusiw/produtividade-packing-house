@@ -1808,6 +1808,43 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
         </div>
     </div>
 
+    <!-- MODAL DE EDITAR RETIRADA (caixas pegas / perda) -->
+    <div id="editAlocModal" class="fixed inset-0 bg-black/60 z-[75] hidden flex justify-center items-center backdrop-blur-sm transition-opacity duration-300 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div class="form-card-header !rounded-t-2xl !rounded-b-none">
+                <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-50 border border-brand-100 shrink-0">
+                    <i data-lucide="pencil" class="w-5 h-5 text-brand-600"></i>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-base font-black text-slate-800 leading-tight">Editar Retirada</h2>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5" id="editAlocResumo">Corrige quantas caixas foram pegas e quantas foram perdidas</p>
+                </div>
+                <button type="button" onclick="hideEditAlocModal()" class="text-slate-400 hover:text-slate-700 shrink-0">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-3">
+                <div>
+                    <label class="section-label">Quantidade real de caixas que pegou</label>
+                    <input type="number" id="editAlocCaixas" min="1" step="1" class="w-full p-2.5 border font-bold">
+                </div>
+                <div class="rounded-lg border border-slate-200 p-2.5 space-y-2">
+                    <label class="section-label !mb-0"><i data-lucide="trash-2" class="w-3 h-3"></i> Caixas perdidas / descartadas</label>
+                    <div class="flex gap-2">
+                        <input type="number" min="0" step="1" inputmode="numeric" id="editAlocPerdaQtd" placeholder="Qtd" class="w-20 p-2 border font-black text-sm text-center shrink-0">
+                        <input type="text" id="editAlocPerdaMotivo" placeholder="Motivo (opcional)" class="flex-1 min-w-0 p-2 border font-semibold text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button type="button" onclick="hideEditAlocModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-sm transition-colors uppercase">Cancelar</button>
+                    <button type="button" onclick="salvarEdicaoAloc()" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-brand-600/20 active:scale-95 uppercase">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL DE FECHAR ALOCAÇÃO / DAR BAIXA -->
     <div id="fecharAlocacaoModal" class="fixed inset-0 bg-black/60 z-[75] hidden flex justify-center items-center backdrop-blur-sm transition-opacity duration-300 p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
@@ -3406,6 +3443,84 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             }
         }
 
+        // ---------- Editar retirada já fechada (caixas pegas / perda) ----------
+        let editingAlocCardId = null;
+        let editingAlocId = null;
+
+        function openEditAlocModal(cardId, alocId, event) {
+            if (event) event.stopPropagation();
+            const card = findCard(cardId);
+            if (!card) return;
+            const aloc = card.alocacoes.find(a => a.id === alocId);
+            if (!aloc) return;
+            editingAlocCardId = cardId;
+            editingAlocId = alocId;
+
+            document.getElementById('editAlocResumo').textContent =
+                `${aloc.colaborador} · pegou às ${aloc.criadoDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+            document.getElementById('editAlocCaixas').value = aloc.caixas;
+            document.getElementById('editAlocPerdaQtd').value = aloc.perdaQuantidade || '';
+            document.getElementById('editAlocPerdaMotivo').value = aloc.perdaMotivo || '';
+
+            document.getElementById('editAlocModal').classList.remove('hidden');
+            lockBodyScroll();
+            lucide.createIcons();
+        }
+
+        function hideEditAlocModal() {
+            document.getElementById('editAlocModal').classList.add('hidden');
+            unlockBodyScroll();
+            editingAlocCardId = null;
+            editingAlocId = null;
+        }
+
+        async function salvarEdicaoAloc() {
+            const card = findCard(editingAlocCardId);
+            if (!card) return;
+            const aloc = card.alocacoes.find(a => a.id === editingAlocId);
+            if (!aloc) return;
+
+            const caixas = Number(document.getElementById('editAlocCaixas').value);
+            const perdaQuantidade = Number(document.getElementById('editAlocPerdaQtd').value) || 0;
+            const perdaMotivo = document.getElementById('editAlocPerdaMotivo').value.trim();
+
+            if (!caixas || caixas <= 0) return showMessageModal('Atenção', 'Informe quantas caixas foram pegas.', 'error');
+            if (perdaQuantidade < 0) return showMessageModal('Atenção', 'Quantidade perdida inválida.', 'error');
+            if (!isSupabaseConfigured) return showMessageModal('Atenção', 'Configure o Supabase primeiro.', 'error');
+
+            // Mesmo aviso de "quantidade não bate" do fechamento original —
+            // aqui dá pra confirmar mesmo assim (o pendente da entrega absorve
+            // a diferença), só avisando antes de salvar.
+            const produzida = card.lotes.filter(l => l.alocacaoId === aloc.id).reduce((s, l) => s + Number(l.quantidade || 0), 0);
+            const informadas = produzida + perdaQuantidade;
+            if (informadas !== caixas) {
+                const dif = informadas - caixas;
+                const msg = dif > 0
+                    ? `${fmtInt(informadas)} cx (produto + perda) são mais do que as ${fmtInt(caixas)} cx que você está registrando como pegas. Confirmar mesmo assim?`
+                    : `${fmtInt(informadas)} de ${fmtInt(caixas)} cx pegas (produto + perda) — as ${fmtInt(-dif)} cx restantes continuam contando como não processado. Confirmar?`;
+                const ok = await showConfirmActionModal('Quantidade não bate', msg);
+                if (!ok) return;
+            }
+
+            try {
+                const { error } = await db.from('alocacoes').update({
+                    caixas: caixas,
+                    perda_quantidade: perdaQuantidade,
+                    perda_motivo: perdaMotivo || null
+                }).eq('id', aloc.id);
+                if (error) throw error;
+
+                aloc.caixas = caixas;
+                aloc.perdaQuantidade = perdaQuantidade;
+                aloc.perdaMotivo = perdaMotivo;
+                hideEditAlocModal();
+                renderParceiroCards();
+            } catch (err) {
+                console.error('Erro ao editar retirada:', err);
+                showMessageModal('Erro', 'Falha ao salvar a edição da retirada. Verifique a conexão com o Supabase.', 'error');
+            }
+        }
+
         // ---------- Editar/excluir lote já lançado (colaborador/produto/quantidade errados) ----------
         let editingLoteCardId = null;
         let editingLoteId = null;
@@ -3804,24 +3919,78 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
             const pendenteClass = t.pendente > 0 ? 'text-red-600' : 'text-green-600';
             const dataBR = isoDateToBR(card.dataColheita);
 
-            const lotesHtml = card.lotes.length === 0
-                ? '<div class="text-[11px] text-slate-400 italic px-1 py-2">Nenhum lote lançado ainda.</div>'
-                : card.lotes.slice().sort((a, b) => b.horaDate - a.horaDate).map(l => {
-                    const horaTxt = l.horaDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    return `<div class="lote-row">
-                        <span class="text-slate-500 font-semibold">${horaTxt}</span>
-                        <span class="text-slate-700 font-bold text-center">${escapeHtml(l.produto)}: ${fmtInt(l.quantidade)}</span>
-                        <span class="text-slate-400 text-center">${l.colaborador ? escapeHtml(l.colaborador) : '—'}</span>
-                        <span class="flex items-center justify-end gap-1 shrink-0">
-                            <button type="button" onclick="openEditLoteModal(${card.cardId}, '${l.id}', event)" title="Editar lote" class="cadastro-badge-icon-btn !w-5 !h-5 text-slate-400 hover:text-brand-600">
-                                <i data-lucide="pencil" class="w-3 h-3"></i>
+            // Histórico de processamento — uma linha por retirada já fechada,
+            // mostrando quanto foi pego vs. quanto virou produto (e quanto foi
+            // perdido), com os produtos daquela retirada logo abaixo. O lápis
+            // no cabeçalho corrige tanto a quantidade pega quanto a perda —
+            // sem isso, uma retirada fechada errada não tinha como ser corrigida
+            // (só dava pra editar produto/quantidade de cada lote isolado).
+            const lotesPorAloc = new Map();
+            const lotesSemAloc = [];
+            card.lotes.forEach(l => {
+                if (l.alocacaoId) {
+                    if (!lotesPorAloc.has(l.alocacaoId)) lotesPorAloc.set(l.alocacaoId, []);
+                    lotesPorAloc.get(l.alocacaoId).push(l);
+                } else {
+                    lotesSemAloc.push(l);
+                }
+            });
+
+            const fechadas = (card.alocacoes || []).filter(a => a.status === 'fechada')
+                .slice().sort((a, b) => (b.fechadaDate || b.criadoDate) - (a.fechadaDate || a.criadoDate));
+
+            const produtoLinhaHtml = (l) => `
+                <div class="flex items-center gap-2 px-2.5 py-1.5 border-t border-dashed border-slate-100 text-[11px]">
+                    <span class="flex-1 min-w-0 truncate text-slate-600 font-semibold">${escapeHtml(l.produto)}: <b class="text-slate-800">${fmtInt(l.quantidade)}</b></span>
+                    <button type="button" onclick="openEditLoteModal(${card.cardId}, '${l.id}', event)" title="Editar lote" class="cadastro-badge-icon-btn !w-5 !h-5 text-slate-400 hover:text-brand-600">
+                        <i data-lucide="pencil" class="w-3 h-3"></i>
+                    </button>
+                    <button type="button" onclick="excluirLote(${card.cardId}, '${l.id}', event)" title="Excluir lote" class="cadastro-badge-icon-btn cadastro-badge-icon-btn-danger !w-5 !h-5 text-slate-400">
+                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                    </button>
+                </div>`;
+
+            const alocRowHtml = (a) => {
+                const lotesDaAloc = (lotesPorAloc.get(a.id) || []).slice().sort((x, y) => x.horaDate - y.horaDate);
+                const produzida = lotesDaAloc.reduce((s, l) => s + l.quantidade, 0);
+                const horaTxt = (a.fechadaDate || a.criadoDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const perdaTxt = a.perdaQuantidade > 0
+                    ? ` · <span class="text-slate-600" title="${a.perdaMotivo ? escapeHtml(a.perdaMotivo) : 'Perdida/descartada'}"><b>${fmtInt(a.perdaQuantidade)}</b> perdida${a.perdaQuantidade !== 1 ? 's' : ''}</span>`
+                    : '';
+                return `
+                    <div class="rounded-lg border border-slate-200 overflow-hidden">
+                        <div class="flex items-center gap-2 p-2.5">
+                            <span class="text-slate-400 font-semibold text-[11px] shrink-0">${horaTxt}</span>
+                            <span class="flex-1 min-w-0 leading-tight">
+                                <span class="block text-xs font-black text-slate-800 truncate">${escapeHtml(a.colaborador)}</span>
+                                <span class="block text-[11px] font-semibold text-slate-500"><b class="text-slate-700">${fmtInt(a.caixas)}</b> pegas · <b class="text-brand-600">${fmtInt(produzida)}</b> viraram produto${perdaTxt}</span>
+                            </span>
+                            <button type="button" onclick="openEditAlocModal(${card.cardId}, '${a.id}', event)" title="Editar caixas pegas / perdidas" class="cadastro-badge-icon-btn !w-6 !h-6 text-slate-400 hover:text-brand-600 shrink-0">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button type="button" onclick="excluirLote(${card.cardId}, '${l.id}', event)" title="Excluir lote" class="cadastro-badge-icon-btn cadastro-badge-icon-btn-danger !w-5 !h-5 text-slate-400">
-                                <i data-lucide="trash-2" class="w-3 h-3"></i>
-                            </button>
-                        </span>
+                        </div>
+                        ${lotesDaAloc.map(produtoLinhaHtml).join('')}
                     </div>`;
-                }).join('');
+            };
+
+            // Lotes sem retirada vinculada (dado antigo, de antes dessa relação
+            // existir) continuam num formato à parte, no jeito antigo.
+            const lotesSemAlocHtml = lotesSemAloc.length === 0 ? '' : lotesSemAloc.slice().sort((a, b) => b.horaDate - a.horaDate).map(l => {
+                const horaTxt = l.horaDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                return `<div class="lote-row">
+                    <span class="text-slate-500 font-semibold">${horaTxt}</span>
+                    <span class="text-slate-700 font-bold text-center">${escapeHtml(l.produto)}: ${fmtInt(l.quantidade)}</span>
+                    <span class="text-slate-400 text-center">${l.colaborador ? escapeHtml(l.colaborador) : '—'}</span>
+                    <span class="flex items-center justify-end gap-1 shrink-0">
+                        <button type="button" onclick="openEditLoteModal(${card.cardId}, '${l.id}', event)" title="Editar lote" class="cadastro-badge-icon-btn !w-5 !h-5 text-slate-400 hover:text-brand-600">
+                            <i data-lucide="pencil" class="w-3 h-3"></i>
+                        </button>
+                        <button type="button" onclick="excluirLote(${card.cardId}, '${l.id}', event)" title="Excluir lote" class="cadastro-badge-icon-btn cadastro-badge-icon-btn-danger !w-5 !h-5 text-slate-400">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                        </button>
+                    </span>
+                </div>`;
+            }).join('');
 
             // Retiradas abertas: colaborador pegou caixas e ainda não fechou em produto.
             const abertas = (card.alocacoes || []).filter(a => a.status === 'aberta')
@@ -3890,10 +4059,11 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     ${retiradaFormHtml}
                 </div>` : '';
 
-            const historicoSectionHtml = card.lotes.length === 0 ? '' : `
+            const historicoSectionHtml = (fechadas.length === 0 && lotesSemAloc.length === 0) ? '' : `
                 <div class="mb-3">
                     <span class="text-[10px] font-black uppercase tracking-wide text-slate-500 block mb-1.5">Histórico de processamento</span>
-                    ${lotesHtml}
+                    <div class="space-y-1.5">${fechadas.map(alocRowHtml).join('')}</div>
+                    ${lotesSemAlocHtml ? `<div class="mt-1.5">${lotesSemAlocHtml}</div>` : ''}
                 </div>`;
 
             const concluidoBarHtml = card.concluido ? `
