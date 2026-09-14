@@ -3950,20 +3950,42 @@ Supabase não configurado. Abra este arquivo, procure por <b>SUPABASE_URL</b> e 
                     </button>
                 </div>`;
 
+            // Frase narrativa da retirada — em vez de números soltos, escreve por
+            // extenso o que aconteceu com as caixas que foram pegas (quanto virou
+            // produto, quanto foi descartado e, se sobrar diferença, quanto ainda
+            // não foi processado), pra ficar claro só de bater o olho.
+            const narrativaRetiradaHtml = (a, produzida) => {
+                const partes = [];
+                if (produzida > 0) {
+                    partes.push(`<b class="text-brand-600">${fmtInt(produzida)}</b> ${produzida !== 1 ? 'viraram' : 'virou'} produto`);
+                }
+                if (a.perdaQuantidade > 0) {
+                    const motivoAttr = a.perdaMotivo ? ` title="${escapeHtml(a.perdaMotivo)}"` : '';
+                    partes.push(`<span class="text-red-500"${motivoAttr}><b>${fmtInt(a.perdaQuantidade)}</b> ${a.perdaQuantidade !== 1 ? 'foram' : 'foi'} descartada${a.perdaQuantidade !== 1 ? 's' : ''}</span>`);
+                }
+                const resto = a.caixas - produzida - a.perdaQuantidade;
+                if (resto > 0) {
+                    partes.push(`<b class="text-amber-600">${fmtInt(resto)}</b> ainda não processada${resto !== 1 ? 's' : ''}`);
+                }
+                const corpo = partes.length === 0
+                    ? 'nada processado ainda'
+                    : partes.length === 1
+                        ? partes[0]
+                        : partes.slice(0, -1).join(', ') + ' e ' + partes[partes.length - 1];
+                return `pegou <b class="text-slate-700">${fmtInt(a.caixas)}</b> caixa${a.caixas !== 1 ? 's' : ''}: ${corpo}`;
+            };
+
             const alocRowHtml = (a) => {
                 const lotesDaAloc = (lotesPorAloc.get(a.id) || []).slice().sort((x, y) => x.horaDate - y.horaDate);
                 const produzida = lotesDaAloc.reduce((s, l) => s + l.quantidade, 0);
                 const horaTxt = (a.fechadaDate || a.criadoDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                const perdaTxt = a.perdaQuantidade > 0
-                    ? ` · <span class="text-slate-600" title="${a.perdaMotivo ? escapeHtml(a.perdaMotivo) : 'Perdida/descartada'}"><b>${fmtInt(a.perdaQuantidade)}</b> perdida${a.perdaQuantidade !== 1 ? 's' : ''}</span>`
-                    : '';
                 return `
                     <div class="rounded-lg border border-slate-200 overflow-hidden">
                         <div class="flex items-center gap-2 p-2.5">
                             <span class="text-slate-400 font-semibold text-[11px] shrink-0">${horaTxt}</span>
                             <span class="flex-1 min-w-0 leading-tight">
                                 <span class="block text-xs font-black text-slate-800 truncate">${escapeHtml(a.colaborador)}</span>
-                                <span class="block text-[11px] font-semibold text-slate-500"><b class="text-slate-700">${fmtInt(a.caixas)}</b> pegas · <b class="text-brand-600">${fmtInt(produzida)}</b> viraram produto${perdaTxt}</span>
+                                <span class="block text-[11px] font-semibold text-slate-500">${narrativaRetiradaHtml(a, produzida)}</span>
                             </span>
                             <button type="button" onclick="openEditAlocModal(${card.cardId}, '${a.id}', event)" title="Editar caixas pegas / perdidas" class="cadastro-badge-icon-btn !w-6 !h-6 text-slate-400 hover:text-brand-600 shrink-0">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
